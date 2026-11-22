@@ -57,7 +57,11 @@ def centre_strip(nr=20, nc=14):
     for x in xs:
         yy = [y for y in np.arange(0.10, 0.30, 0.004) if not np.isnan(zat(x, y))]
         hem.append(min(yy) if yy else 0.15)
-    hem = np.array(hem); print("centre strip hem", np.round(hem, 3))
+    hem = np.array(hem)
+    for _ in range(4):                      # limit the hem step between neighbouring columns (keeps cage edges short)
+        for j in range(1, nc): hem[j] = min(hem[j], hem[j - 1] + 0.026)
+        for j in range(nc - 2, -1, -1): hem[j] = min(hem[j], hem[j + 1] + 0.026)
+    print("centre strip hem", np.round(hem, 3))
     top = 0.50; Pm = np.zeros((nr, nc, 3))
     for j, x in enumerate(xs):
         for i in range(nr):
@@ -70,6 +74,10 @@ def centre_strip(nr=20, nc=14):
     for j in range(nc):
         z = Pm[:, j, 2]; ok = ~np.isnan(z)
         Pm[:, j, 2] = np.interp(np.arange(nr), np.arange(nr)[ok], z[ok]) if ok.any() else 0.215
+    Z = Pm[:, :, 2]
+    for _ in range(4):                      # the z-cast can flip between neighbouring layers: smooth it
+        Zp = np.pad(Z, 1, mode="edge"); Z = 0.2 * Z + 0.2 * (Zp[:-2, 1:-1] + Zp[2:, 1:-1] + Zp[1:-1, :-2] + Zp[1:-1, 2:])
+    Pm[:, :, 2] = np.clip(Z, 0.20, 0.235)
     return Pm
 
 
