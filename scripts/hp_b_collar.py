@@ -29,11 +29,18 @@ def fit_half():
     # mid-surface x,z follow the mid row (the collar's own wall), heights from base/top rows, all smoothed
     mid = h[4].copy()
     J = len(top)
-    ytop = smooth_curve(top[:, 1], 4); ybase = smooth_curve(base[:, 1], 3)
+    ytop = smooth_curve(top[:, 1], 10); ybase = smooth_curve(base[:, 1], 3)
     xz = smooth_curve(mid[:, [0, 2]], 6)
-    xzt = smooth_curve(top[:, [0, 2]], 5); xzb = smooth_curve(base[:, [0, 2]], 5)
+    xzt = smooth_curve(top[:, [0, 2]], 10); xzb = smooth_curve(base[:, [0, 2]], 5)
     # lean: blend base/top plan positions from the smoothed wall (keeps the stand-up cone shape, drops the folds)
     xzb = 0.5 * xzb + 0.5 * xz; xzt = 0.5 * xzt + 0.5 * xz
+    # wing lower edge dips toward the lapel corner; top rim flares out a little (stand-up collar)
+    drop = np.zeros(J); drop[10:18] = [0.004, 0.010, 0.013, 0.012, 0.009, 0.006, 0.003, 0.0][:J - 10]
+    ybase = ybase - drop
+    fl = np.zeros(J); fl[:14] = 0.004 * np.clip((13 - np.arange(14)) / 4.0, 0, 1)
+    for k in range(J):
+        d = np.array([xzt[k, 0] - AX[0], xzt[k, 1] - AX[2]]); nd = np.linalg.norm(d)
+        if nd > 1e-6 and fl[k] > 0: xzt[k] += d / nd * fl[k]
     # tip must keep a little height so the leaf is a real (quad) point, not a degenerate one
     gap = ytop - ybase
     ytop[-1] += max(0, 0.008 - gap[-1]) / 2; ybase[-1] -= max(0, 0.008 - gap[-1]) / 2

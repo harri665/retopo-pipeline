@@ -43,7 +43,7 @@ def emit(name, items, kind="stud"):
     for b in items:
         c = np.array(b["centre"], float); n = np.array(b["normal"], float); n /= np.linalg.norm(n)
         h = cast.nearest(c + n * 0.004)                         # seat on the sculpt surface under the bump
-        rad = max(b["radius"] * 1.25, 0.0022); hgt = float(np.clip(b["height"] * 1.1, 0.0012, 0.006))
+        rad = max(b["radius"] * 1.08, 0.0022); hgt = float(np.clip(b["height"] * 1.1, 0.0012, 0.006))
         base = c - n * hgt * 0.45
         V, Q = (H.button if kind == "button" else H.stud)(base, n, rad, hgt, n=4 if rad < 0.004 else 6)
         parts.append(hipoly.subdivide(V, Q, 1, crease_angle=55, crease=0.6))

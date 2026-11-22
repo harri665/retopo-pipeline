@@ -1,7 +1,7 @@
 from scripts.hp_d_common import *
 
 
-def build(m=15, a=0.44, xa=0.7735, xe=0.7855, rad=1.8 * mm):
+def build(m=19, a=0.70, xa=0.7715, xe=0.7915, rad=2.0 * mm):
     F = frame(); th = np.linspace(-a, a, m); x = xa + (xe - xa) * (th / a) ** 2
     P = F.P(x, th, r_plate(x)); nor = F.dir(th)
     # round bead, tapered at the ends by shrinking radius: sweep a fixed section, then scale each ring toward its centre

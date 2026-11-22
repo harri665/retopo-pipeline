@@ -63,11 +63,64 @@ def finish_strip(P, name):
     return G.finish(name, V2, Q2, crease_angle=35)
 
 
-if __name__ == "__main__":
-    comps = S2.segment(); strips = []
+def stick(az0, r_top, r_bot, y_bot, y_top_c, depth=0.04, tang=0.009, nrows=7):
+    """edge-on strip: wide radially (depth), thin tangentially; leans from r_top (at TOPY) to r_bot (at y_bot)."""
+    t = np.radians(az0); d = np.array([np.sin(t), 0, np.cos(t)]); w = np.array([np.cos(t), 0, -np.sin(t)])
+    P = np.zeros((nrows, 5, 3))
+    for i in range(nrows):
+        f = i / (nrows - 1); y = TOPY + (y_bot - TOPY) * f; rc = r_top + (r_bot - r_top) * f
+        for j in range(5):
+            u = j / 4 - 0.5
+            yy = y if j in (1, 2, 3) or i < nrows - 1 else y + 0.0
+            # ragged/pointed end: the outer columns stop higher than the middle
+            ybot = y_bot + (0.018 if j in (0, 4) else 0.008 if j in (1, 3) else 0.0)
+            yv = TOPY + (ybot - TOPY) * f
+            P[i, j] = np.array([G.CX, yv, G.CZ]) + (rc + u * depth) * d
+    return P
+
+
+def finish_stick(P, az0, name):
+    # sheet runs along the radial direction; thickness tangentially: build quads with outward = tangential (+w)
+    V, Q = B.grid_mesh(P)
+    t = np.radians(az0); w = np.array([np.cos(t), 0, -np.sin(t)])
+    n = sum(np.dot(np.cross(V[q[1]] - V[q[0]], V[q[-1]] - V[q[0]]), w) > 0 for q in Q) / len(Q)
+    if n < 0.5: V, Q = B.grid_mesh(P, flip=True)
+    V2, Q2 = B.solidify(V, Q, THK)
+    return G.finish(name, V2, Q2, crease_angle=35)
+
+
+def main():
+    comps = S2.segment(); ent = []
+    byid = {}
     for n, c in enumerate(comps):
-        a, y, r = comp_arrays(c)
-        if r.max() < 0.09: continue
-        if abs(a.mean()) < 5 and False: continue
-        tl, ag, yg = teeth(a, y, r)
-        print(n, "k", c["k"], "az %.0f..%.0f" % (a.min(), a.max()), "teeth", [(round(t["tip"], 1), round(t["ytip"], 3), round(t["a0"], 1), round(t["a1"], 1)) for t in tl])
+        a, y, r = comp_arrays(c); byid[n] = (a, y, r, c)
+    rfn = lambda ac, y: float(G.rsample(P1.RC0, ac, y))
+    items = []      # (az_sort, kind, payload)
+    for n in (2, 6, 14, 15, 13):
+        a, y, r, c = byid[n]
+        tl, ag, yg = teeth(a, y, r, prom=0.009 if n in (2, 6) else 0.004)
+        if not tl and n in (13,):
+            tl = [dict(a0=a.min(), a1=a.max(), tip=a[np.argmin(y)], ytip=y.min(), prof=(ag, yg))]
+        for t in tl:
+            sl, ic = radius_fit(a, y, r, t["a0"], t["a1"])
+            items.append((((t["a0"] + t["a1"]) / 2) % 360, "slab", dict(t=t, sl=sl, ic=ic, comp=n)))
+    for az0, ids, depth in ((87.7, (7, 0), 0.04), (-87.7, (10, 4), 0.04), (131.7, (9, 22, 24), 0.03), (-131.7, (11, 15), 0.03), (124.0, (1,), 0.03), (-123.5, (3,), 0.03)):
+        aa = np.concatenate([byid[i][0] for i in ids]); yy = np.concatenate([byid[i][1] for i in ids]); rr = np.concatenate([byid[i][2] for i in ids])
+        sl, ic = radius_fit(aa, yy, rr, aa.min(), aa.max()) if np.ptp(yy) > 0.03 else (0.0, rr.mean())
+        items.append((az0 % 360, "stick", dict(az0=float(np.mean(aa)), ybot=float(yy.min()) - 0.002, sl=sl, ic=ic, depth=depth)))
+    items.sort(key=lambda x: x[0]); log = []
+    for k, (azs, kind, p) in enumerate(items, 1):
+        name = "underskirt_strip_%02d" % k
+        if kind == "slab":
+            t = p["t"]; P = build_strip(t["a0"], t["a1"], t["ytip"], t["tip"], t["prof"], p["sl"], p["ic"], rfn)
+            r = finish_strip(P, name); log.append((name, "slab", round(float(azs), 1), round(float(t["ytip"]), 3), r))
+        else:
+            rt = p["ic"] + p["sl"] * TOPY; rb = p["ic"] + p["sl"] * p["ybot"]
+            P = stick(p["az0"], rt, rb, p["ybot"], TOPY, depth=p["depth"]); r = finish_stick(P, p["az0"], name)
+            log.append((name, "stick", round(float(azs), 1), round(p["ybot"], 3), r))
+    for l in log: print(l)
+    print(len(log))
+
+
+if __name__ == "__main__":
+    main()

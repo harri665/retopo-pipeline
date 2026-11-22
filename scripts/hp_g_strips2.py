@@ -16,8 +16,19 @@ def segment():
     comps = []
     for k in range(3):
         rk = L[:, :, k]; m = np.isfinite(rk) & (rk > 0.04) & (YS[:, None] < YMAX)
-        coat = np.abs(rk - P1.RC0) < 0.012
-        m &= ~(coat & (YS[:, None] > 0.12) & np.isfinite(P1.RC0))
+        coat = np.zeros(m.shape, bool); A360 = np.arange(G.NAZ) * G.DAZ
+        def hemfun(a):   # coat hem y for az (deg, 0..360) from the panel definitions
+            h = np.full(a.shape, -1.0)
+            bk = (a >= 102) & (a <= 258); h[bk] = np.interp(a[bk], [p[0] for p in P1.BK_HEM_L], [p[1] for p in P1.BK_HEM_L])
+            for sgn in (1, -1):
+                aa = np.where(sgn > 0, a, 360 - a)
+                f = (aa >= 29.8) & (aa <= 61.0); h[f] = np.interp(aa[f], [p[0] for p in P1.FL_HEM], [p[1] for p in P1.FL_HEM])
+                sd = (aa >= 61.0) & (aa <= 94.6); h[sd] = np.interp(aa[sd], [p[0] for p in P1.SD_HEM], [p[1] for p in P1.SD_HEM])
+            return h
+        hm = hemfun(A360)
+        coat = YS[:, None] >= (hm[None, :] - 0.003)
+        coat &= (hm[None, :] > 0)
+        m &= ~coat
         # exclude centre strip region and front panels region of layer0 r<0.09 near the centre
         a = az[None, :]
         m &= ~((abs(a) < 12) | ((a > 12) & (a < 39) & (rk < 0.09)))
@@ -40,7 +51,7 @@ def segment():
         nc, lb = connected_components(g, directed=False)
         sizes = np.bincount(lb)
         for c in range(nc):
-            if sizes[c] < 60: continue
+            if sizes[c] < 14: continue
             sel = ii[lb == c]
             comps.append(dict(k=k, cells=sel))
     return comps
