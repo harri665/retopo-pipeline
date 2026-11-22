@@ -44,13 +44,19 @@ def field(az):
             r[i] = min(hs, key=lambda h: abs(h - exp)); prev = r[i]
         else:
             prev = exp
+    m = YG > 0.45
+    for _ in range(2):
+        q = r.copy(); idx = np.where(m)[0]
+        for i in idx[1:-1]:
+            if not np.isnan(r[i - 1:i + 2]).any(): q[i] = 0.25 * r[i - 1] + 0.5 * r[i] + 0.25 * r[i + 1]
+        r = q
     _f[k] = r
     return r
 
 
 def r_at(az, y):
     r = field(az)
-    for d in (1, -1, 2, -2, 3, -3, 5, -5):
+    for d in (1, -1, 2, -2, 3, -3, 5, -5, 8, -8, 12, -12):
         if (~np.isnan(r)).sum() >= 3: break
         r = field(az + d)
     ok = ~np.isnan(r)

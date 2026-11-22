@@ -6,12 +6,12 @@ import sys
 import numpy as np
 from retopo import build as B, meshio
 
-NS = 28                       # ring segments; angle 0 = front of shaft / top of foot, 90 deg = +W side (see below)
+NS = 32                       # ring segments; angle 0 = front of shaft / top of foot, 90 deg = +W side (see below)
 YAW = np.deg2rad(10.7)
 F3 = np.array([np.sin(YAW), 0.0, np.cos(YAW)])       # foot direction
 Y3 = np.array([0.0, 1.0, 0.0])
 SH = np.array([0.567, 0.0, 0.131]) + np.array([np.cos(YAW), 0, -np.sin(YAW)]) * 0.003   # shaft axis (x,z)
-RHO, YF = 0.032, 0.025        # bend radius, foot axis height
+RHO, YF = 0.060, 0.025        # bend radius, foot axis height
 U_TOE = 0.121
 BOX = np.array([[0.535, -0.002, 0.086], [0.635, 0.112, 0.252]])
 
@@ -23,13 +23,13 @@ def pt(u, y):                 # point on the axis in (forward distance from shaf
 def stations():
     """list of (axis point, tangent) from the top of the shaft down, round the ankle bend, to the toe."""
     S = []
-    for y in [0.174, 0.170, 0.152, 0.134, 0.116, 0.100, 0.092, 0.084, 0.076, 0.068]:
+    for y in [0.174, 0.170, 0.152, 0.134, 0.116, 0.100, 0.093, 0.086]:
         S.append((pt(0, y), -Y3, "shaft", y))
     yb = YF + RHO
     for k in range(5):                                    # fan around the ankle bend
         ph = np.deg2rad(90 * k / 4)
         S.append((pt(RHO - RHO * np.cos(ph), yb - RHO * np.sin(ph)), np.sin(ph) * F3 - np.cos(ph) * Y3, "bend", ph))
-    for u in [0.044, 0.056, 0.068, 0.080, 0.092, 0.103, 0.112]:
+    for u in [0.072, 0.083, 0.094, 0.103, 0.110]:
         S.append((pt(u, YF), F3, "foot", u))
     return S
 
@@ -72,14 +72,12 @@ def main():
             A, D, y = r; rows[i] = A + (hold - (0.006 if y > 0.173 else 0.0))[:, None] * D
     P = np.array(rows)
     # smooth lightly around the rings, keep the sole flat
-    for _ in range(1):
-        P = 0.25 * np.roll(P, 1, 1) + 0.5 * P + 0.25 * np.roll(P, -1, 1)
     P[:, :, 1] = np.where(P[:, :, 1] < 0.004, 0.0, P[:, :, 1])
     # toe cap: shrink ring + pole
-    last = P[-1]; cen = last.mean(0); pole = cen + F3 * 0.011
-    dome = cen + F3 * 0.006 + (last - cen) * 0.55
-    V, Q = B.grid_mesh(np.concatenate([P, dome[None]], 0), wrap_u=True, flip="--flip" in sys.argv)
-    V = np.vstack([V, pole]); k = len(V) - 1; r0 = (len(P)) * NS
+    last = P[-1]; cen = last.mean(0); pole = cen + F3 * 0.010
+    domes = [cen + F3 * 0.0035 + (last - cen) * 0.85, cen + F3 * 0.0075 + (last - cen) * 0.55]
+    V, Q = B.grid_mesh(np.concatenate([P, np.array(domes)], 0), wrap_u=True, flip="--flip" in sys.argv)
+    V = np.vstack([V, pole]); k = len(V) - 1; r0 = (len(P) + 1) * NS
     for j in range(NS):
         a, b = r0 + j, r0 + (j + 1) % NS
         Q.append([b, a, k] if "--flip" in sys.argv else [a, b, k])
