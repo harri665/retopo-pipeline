@@ -52,3 +52,6 @@ out; hip cord kept as its own object.
   `hipoly3/<object>.obj`, `scripts/hp3_<region>.sh`. If they are gone after a reset, check which seed
   files exist and relaunch only the missing regions with the same prompts (region descriptions are in
   the brief + REGISTER). Then continue with to-do item 2.
+- arms DONE (14 objects, all PASS; added bracer_ring_strap_l/r). Open: coat_upper seeds in chest.json at
+  left/right z 0.10-0.19, y 0.70-0.75 land on the arm (fix in global pass); ragged cuff/sleeve border;
+  sleeve upper end vs shoulder flap untuned; right arm not visually checked.
