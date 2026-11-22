@@ -93,7 +93,7 @@ def likeness(V, polys, TV, TF, n=40000, seed=0):
             "obj_to_seg_p95": round(float(np.percentile(d2, 95)), 2), "obj_to_seg_max": round(float(d2.max()), 2)}
 
 
-def build(name, mask, edge_mm=4.0, levels=1, cover=None, skirt_mm=3.0, sharp=False, border_smooth=8, out_dir="hipoly3", min_faces=200):
+def build(name, mask, edge_mm=4.0, levels=1, cover=None, skirt_mm=3.0, sharp=False, border_smooth=8, out_dir="hipoly3", min_faces=200, max_base=15000):
     """mask: source faces of this object. cover: source faces of things sitting on it, flattened and remeshed as part of it."""
     full = mask if cover is None else (mask | cover)
     V, F, vid = extract(full); V, F = keep_big(V, F, min_faces)
@@ -102,7 +102,7 @@ def build(name, mask, edge_mm=4.0, levels=1, cover=None, skirt_mm=3.0, sharp=Fal
         SV, SF = meshio.load_source(); cmask = cover[np.flatnonzero(full)]
         V0, F0, _ = extract(full); V0 = relax_under(V0, F0, cmask); TV, TF = keep_big(V0, F0, min_faces)
     area = 0.5 * np.linalg.norm(np.cross(TV[TF[:, 1]] - TV[TF[:, 0]], TV[TF[:, 2]] - TV[TF[:, 0]]), axis=1).sum()
-    target = max(60, int(area / (edge_mm / MM) ** 2))
+    target = min(max_base, max(60, int(area / (edge_mm / MM) ** 2)))
     import fast_simplification
     dv, df = fast_simplification.simplify(TV.astype(np.float32), TF.astype(np.int32), target_count=min(len(TF), max(4000, target * 12)))
     dv, df = qremesh.clean_manifold(dv.astype(float), df); dv, df = keep_big(dv, df, 20)
