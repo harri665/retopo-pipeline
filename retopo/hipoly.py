@@ -6,11 +6,24 @@ import numpy as np
 from . import meshio
 
 
-def subdivide(V, polys, levels=2):
+def subdivide(V, polys, levels=2, crease_angle=None, crease=1.0, extra_creases=None):
+    """Catmull-Clark subdivision. Hard edges stay hard through edge creases:
+    crease_angle (degrees): every edge whose two faces meet at more than this angle gets `crease` (0..1).
+    extra_creases: {(v0, v1): weight} for specific edges. Open borders always keep their shape."""
     import bpy
     me = bpy.data.meshes.new("c"); me.from_pydata(np.asarray(V).tolist(), [], [list(map(int, p)) for p in polys]); me.update()
+    if crease_angle is not None or extra_creases:
+        import bmesh, math
+        bm = bmesh.new(); bm.from_mesh(me); lay = bm.edges.layers.float.get("crease_edge") or bm.edges.layers.float.new("crease_edge")
+        for e in bm.edges:
+            w = 0.0
+            if crease_angle is not None and len(e.link_faces) == 2 and e.calc_face_angle(0.0) > math.radians(crease_angle): w = crease
+            if extra_creases:
+                k = (e.verts[0].index, e.verts[1].index); w = max(w, extra_creases.get(k, extra_creases.get(k[::-1], 0.0)))
+            e[lay] = w
+        bm.to_mesh(me); bm.free()
     ob = bpy.data.objects.new("c", me); bpy.context.scene.collection.objects.link(ob)
-    m = ob.modifiers.new("s", "SUBSURF"); m.levels = levels; m.render_levels = levels; m.boundary_smooth = "ALL"
+    m = ob.modifiers.new("s", "SUBSURF"); m.levels = levels; m.render_levels = levels; m.boundary_smooth = "PRESERVE_CORNERS"; m.use_creases = True
     ev = ob.evaluated_get(bpy.context.evaluated_depsgraph_get()); em = ev.to_mesh()
     V2 = np.array([v.co[:] for v in em.vertices]); P2 = [list(p.vertices) for p in em.polygons]
     ev.to_mesh_clear(); bpy.data.objects.remove(ob); bpy.data.meshes.remove(me)
@@ -79,9 +92,10 @@ def adjacency(nv, polys):
     return diags(1.0 / d) @ M
 
 
-def build(name, levels=2, dmax=0.005, exclude=None):
-    V, P = meshio.load_obj(os.path.join(meshio.ROOT, "parts", name + ".obj"))
-    V2, P2 = subdivide(V, P, levels); V3, W = project(V2, P2, dmax, exclude=exclude)
+def build(name, levels=2, dmax=0.005, exclude=None, crease_angle=None, crease=1.0, conform=True, src_dir="parts"):
+    V, P = meshio.load_obj(os.path.join(meshio.ROOT, src_dir, name + ".obj"))
+    V2, P2 = subdivide(V, P, levels, crease_angle, crease)
+    V3, W = project(V2, P2, dmax, exclude=exclude) if conform else (V2, np.zeros(len(V2)))
     os.makedirs(os.path.join(meshio.ROOT, "hipoly"), exist_ok=True)
     meshio.save_obj(os.path.join(meshio.ROOT, "hipoly", name + ".obj"), V3, P2)
     return len(P2), float(W.mean())
