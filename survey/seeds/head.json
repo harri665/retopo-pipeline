@@ -578,7 +578,7 @@
 0.8
 ]
 ],
-"coat": [
+"coat_upper": [
 [
 "back",
 0.535,
@@ -620,7 +620,7 @@
 0.745
 ]
 ],
-"shoulder_l": [
+"shoulder_arch_l": [
 [
 "front",
 0.585,
@@ -654,6 +654,6 @@
 ]
 },
 "mirror": [
-"shoulder_l"
+"shoulder_arch_l"
 ]
 }
