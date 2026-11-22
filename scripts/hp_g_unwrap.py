@@ -2,7 +2,7 @@
 import numpy as np, pickle
 from retopo import build as B
 CX,CZ=B.CX,0.165
-AZ=np.arange(0,360,0.5); YS=np.arange(0.10,0.645,0.006)
+AZ=np.arange(0,360,0.25); YS=np.arange(0.10,0.645,0.004)
 def run():
     C=B.Caster(); L=np.full((len(YS),len(AZ),4),np.nan); T=np.full((len(YS),len(AZ),4),np.nan)
     for i,y in enumerate(YS):

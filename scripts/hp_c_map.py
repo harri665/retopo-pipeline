@@ -1,8 +1,10 @@
 import numpy as np
 from retopo import build as B
 from scripts.arms_pauldron import axis_pt
+from PIL import Image, ImageDraw
 C=B.Caster()
-xs=np.linspace(0.50,0.72,111); th=np.radians(np.linspace(-120,120,241))
+X0,X1=0.53,0.69; T0,T1=-115,115
+xs=np.arange(X0,X1,0.0015); th=np.radians(np.arange(T0,T1+0.1,0.75))
 R=np.full((len(xs),len(th)),np.nan)
 for i,x in enumerate(xs):
     a=axis_pt(x)
