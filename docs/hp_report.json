@@ -703,7 +703,7 @@
    "unused": 0
   },
   "skirt_back_panel": {
-   "quads": 24160,
+   "quads": 31968,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -946,7 +946,7 @@
    "unused": 0
   },
   "underskirt_centre_strip": {
-   "quads": 3552,
+   "quads": 8928,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -955,7 +955,7 @@
    "unused": 0
   },
   "underskirt_strip_01": {
-   "quads": 1088,
+   "quads": 1984,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -973,7 +973,7 @@
    "unused": 0
   },
   "underskirt_strip_03": {
-   "quads": 1088,
+   "quads": 1984,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -1000,7 +1000,7 @@
    "unused": 0
   },
   "underskirt_strip_06": {
-   "quads": 1088,
+   "quads": 1984,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -1009,7 +1009,7 @@
    "unused": 0
   },
   "underskirt_strip_07": {
-   "quads": 1088,
+   "quads": 1984,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -1018,7 +1018,7 @@
    "unused": 0
   },
   "underskirt_strip_08": {
-   "quads": 1088,
+   "quads": 1984,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -1027,7 +1027,7 @@
    "unused": 0
   },
   "underskirt_strip_09": {
-   "quads": 1088,
+   "quads": 1984,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -1036,7 +1036,7 @@
    "unused": 0
   },
   "underskirt_strip_10": {
-   "quads": 1088,
+   "quads": 1984,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -1045,7 +1045,7 @@
    "unused": 0
   },
   "underskirt_strip_11": {
-   "quads": 1088,
+   "quads": 1984,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -1063,7 +1063,7 @@
    "unused": 0
   },
   "underskirt_strip_13": {
-   "quads": 1088,
+   "quads": 1984,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -1090,7 +1090,7 @@
    "unused": 0
   },
   "underskirt_strip_16": {
-   "quads": 1088,
+   "quads": 1984,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -1117,7 +1117,7 @@
    "unused": 0
   }
  },
- "total_polys": 732056,
+ "total_polys": 754200,
  "issues": {
   "mask_faceplate": {
    "quads": 8896,

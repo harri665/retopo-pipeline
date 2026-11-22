@@ -38,16 +38,19 @@ def radius_fit(a, y, r, a0, a1):
     return float(np.clip(A[0], -0.6, 0.2)), float(A[1])
 
 
-def build_strip(a0, a1, ytip, tip, prof, slope, icpt, coat_r_fn, nrows=7, ncols=5):
+def build_strip(a0, a1, ytip, tip, prof, slope, icpt, coat_r_fn, nrows=9, ncols=7):
     """flat slab through radial position at tip azimuth; columns across the width, rows to the ragged bottom."""
     ac = 0.5 * (a0 + a1); rc = lambda y: icpt + slope * y
     aa = np.linspace(a0, a1, ncols); aa[np.argmin(abs(aa - tip))] = tip
     aa = np.unique(np.r_[aa, tip])[:ncols + 1]
     t = np.radians(ac); d = np.array([np.sin(t), 0, np.cos(t)]); w = np.array([np.cos(t), 0, -np.sin(t)])
     P = np.zeros((nrows, len(aa), 3))
+    ybs = np.array([max((np.interp(a, prof[0], prof[1]) if len(prof[0]) > 1 else ytip) - 0.002, 0.06) for a in aa])
+    for _ in range(4):                       # keep neighbouring hem heights within 0.03 (short cage edges)
+        for j in range(1, len(aa)): ybs[j] = min(ybs[j], ybs[j - 1] + 0.03)
+        for j in range(len(aa) - 2, -1, -1): ybs[j] = min(ybs[j], ybs[j + 1] + 0.03)
     for j, a in enumerate(aa):
-        yb = np.interp(a, prof[0], prof[1]) if len(prof[0]) > 1 else ytip
-        yb = max(yb - 0.002, 0.06)
+        yb = ybs[j]
         for i in range(nrows):
             y = TOPY + (yb - TOPY) * i / (nrows - 1)
             rr = min(rc(y), coat_r_fn(ac, y) - 0.034)

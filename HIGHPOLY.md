@@ -3,7 +3,7 @@
 Topology only (no UVs, textures or materials). Built object by object from `docs/REGISTER.md`.
 
 ## Deliverables
-- `export/trooper_highpoly.glb` and `.fbx`: 124 named objects (`HP_Trooper_<object>`), 732,056 quads, 190 cm tall.
+- `export/trooper_highpoly.glb` and `.fbx`: 124 named objects (`HP_Trooper_<object>`), 754200 quads, 190 cm tall.
 - `hp_cages/<object>.obj`: the quad control cage of each built object (the subdivision topology).
 - `hipoly/<object>.obj`: each object subdivided (and conformed to the sculpt where it is cloth or leather).
 - `python -m scripts.hp_assemble --export` seats cloth under hardware, checks every object and re-exports.
@@ -36,7 +36,7 @@ Topology only (no UVs, textures or materials). Built object by object from `docs
 - Glove: slight kink at the base of the little finger.
 - Studs: positions come from automatic detection, mirrored for symmetry; a few are missing (for example one of
   four on each shoulder cap) and none have been re-seated on the final surfaces.
-- Several objects exceed the 15k-quad guideline (skirt back panel 24k, hip flap trims 22k).
+- Several objects exceed the 15k-quad guideline (skirt back panel 32k, hip flap trims 22k).
 
 ## Built without a decision from the user (see register)
 No hair; no back cross emblem or centre trim; no shoulder emblems; no skirt filigree; no hip cord;
