@@ -27,7 +27,7 @@ def build(nu=14, nv=5):
         for i, vv in enumerate(v):
             y = Y_TOP + vv * (ybot - Y_TOP)
             P[i, j] = (x, y, S(x, y) + 0.0006)
-    return thick_sheet(P, T)
+    return thick_sheet(P, T, (0, 0, 1))
 
 if __name__ == "__main__":
     V, Q = build()

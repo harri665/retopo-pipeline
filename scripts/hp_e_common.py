@@ -103,10 +103,15 @@ def orient_outward(V, polys):
     return polys if vol >= 0 else [list(p)[::-1] for p in polys]
 
 
-def thick_sheet(P, t, flip=False):
-    """Closed thin shell from a grid (rows, cols, 3) of the OUTER face; inner face at -t along vertex normals.
-    Rim edges are bridged (and later creased)."""
-    V, Q = B.grid_mesh(P, flip=flip)
+def thick_sheet(P, t, outward):
+    """Closed thin shell from a grid (rows, cols, 3) of the OUTER face; inner face at -t along vertex normals (into the object).
+    `outward` (3,) or (rows,cols,3): the direction the outer face must face (decides the grid winding). Rim edges are bridged."""
+    V, Q = B.grid_mesh(P)
+    ow = np.broadcast_to(np.asarray(outward, float), P.shape).reshape(-1, 3)
+    s = 0.0
+    for q in Q:
+        n = np.cross(V[q[1]] - V[q[0]], V[q[3]] - V[q[0]]); s += n @ ow[q].mean(0)
+    if s < 0: V, Q = B.grid_mesh(P, flip=True)
     V2, Q2 = B.solidify(V, Q, t)
     return V2, orient_outward(V2, Q2)
 
