@@ -122,21 +122,5 @@ if __name__ == "__main__":
         P, az = back(); V, Q = solid_and_write("bk", P); print("BK outward", G.outward_ok(V, Q), "cols", len(az)); parts.append(("skirt_back_panel", V, Q))
     for name, V, Q in list(parts):
         if name.endswith("_l") and "front_panel" not in name: parts.append((name[:-2] + "_r",) + B.mirror_x(V, Q))
-    TC = B.Caster(*(lambda VP: (VP[0], meshio.triangulate(VP[1])[0]))(meshio.load_obj("hipoly/trousers.obj")))
-
-    def lift_over_trousers(V, margin=0.006):
-        V = V.copy(); n = 0
-        for k, q in enumerate(V):
-            if q[1] < 0.5: continue
-            d = np.array([q[0] - G.CX, 0, q[2] - G.CZ]); r = np.linalg.norm(d); d /= r
-            h = TC.first(np.array([G.CX, q[1], G.CZ]) + d * 0.5, -d, 0.5)
-            if h is None: continue
-            rt = 0.5 - h[3]
-            if r < rt + margin:
-                dl = min(rt + margin - r, 0.012); V[k, 0] += d[0] * dl; V[k, 2] += d[2] * dl; n += 1
-        return V, n
-
-    for k, (name, V, Q) in enumerate(parts):
-        V, n = lift_over_trousers(V); parts[k] = (name, V, Q); print(name, "lifted over trousers:", n)
     for name, V, Q in parts:
         V2, Q2 = thicken(V, Q); r = G.finish(name, V2, Q2); print(name, r)

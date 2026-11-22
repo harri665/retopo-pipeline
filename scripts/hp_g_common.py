@@ -35,7 +35,7 @@ def track(rule="outer", rmin=0.09, tol=0.010, starts=(0.30, 0.34, 0.26, 0.38, 0.
                 if hit is not None: OK[i, j] = True; prev = hit
                 else: prev = exp
                 hist.append(prev); RC[i, j] = prev
-                if len(hist) >= 7: slope = float(np.clip((hist[-1] - hist[-7]) / (6 * DY * step), -0.6, 0.6))
+                if len(hist) >= 7: slope = float(np.clip((hist[-1] - hist[-7]) / (6 * DY * step), -0.6, 0.0))
                 i += step
     return RC, OK
 

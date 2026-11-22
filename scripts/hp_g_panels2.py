@@ -16,7 +16,7 @@ def mirror(V, Q):
     return B.mirror_x(V, Q)
 
 
-def liner_back(nr=14, nc=12):
+def liner_back(nr=14, nc=17):
     RC = G.fill_az(RC1, 110, 250)
     a0, a1 = 116.7, 243.3
     cols = [(lambda y, u=u: a0 + u * (a1 - a0)) for u in np.linspace(0, 1, nc)]
@@ -30,7 +30,7 @@ FLN_IN = [(0.165, 41.0), (0.20, 38.5), (0.26, 37.0), (0.32, 34.8), (0.38, 32.2),
 FLN_HEM = [(41.0, 0.165), (45.5, 0.222), (61.8, 0.256)]
 
 
-def liner_front_L(nr=14, nc=6):
+def liner_front_L(nr=22, nc=10):
     RC = G.fill_az(RC1, 10, 66)
     ein = np.array(FLN_IN); elf = lambda y: np.interp(y, ein[:, 0], ein[:, 1])
     cols = [(lambda y, u=u: elf(y) + u * (61.8 - elf(y))) for u in np.linspace(0, 1, nc)]
