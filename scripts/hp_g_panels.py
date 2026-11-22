@@ -103,7 +103,7 @@ def back(nr=18, relief_gain=3.5):
     for i in range(nr):
         y = Y[i, 3]
         rd = G.rsample(RCF, dense, np.full(len(dense), y)); sm = uniform_filter1d(rd, 41, mode="nearest")
-        gain_r = lambda a: np.interp(a, dense, (relief_gain - 1) * (rd - sm))
+        gain_r = lambda a: np.interp(a, dense, np.clip((relief_gain - 1) * (rd - sm), -0.004, 0.004))
         out[i] = R[i] + gain_r(A[i])
     out[0] = out[0]
     P = G.pt(A, Y, out)
