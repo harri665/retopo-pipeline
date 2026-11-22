@@ -55,3 +55,7 @@ out; hip cord kept as its own object.
 - arms DONE (14 objects, all PASS; added bracer_ring_strap_l/r). Open: coat_upper seeds in chest.json at
   left/right z 0.10-0.19, y 0.70-0.75 land on the arm (fix in global pass); ragged cuff/sleeve border;
   sleeve upper end vs shoulder flap untuned; right arm not visually checked.
+- chest DONE (11 objects PASS: coat_upper, lapel_l/r, shoulder_arch/cap/flap_l/r, armhole_roll_l/r).
+  Open: ragged coat_upper hem at belt; lapel_r lower end may be long; armhole roll borders soft;
+  arms.json shoulder_flap_l seeds at front (0.62,0.79), top (0.62,0.16), back (0.64,0.78) are really on
+  the cap (chest.json overrides them only by file order: fix in arms.json during the global pass).
