@@ -11,7 +11,8 @@ YAW = np.deg2rad(10.7)
 F3 = np.array([np.sin(YAW), 0.0, np.cos(YAW)])       # foot direction
 Y3 = np.array([0.0, 1.0, 0.0])
 SH = np.array([0.567, 0.0, 0.131]) + np.array([np.cos(YAW), 0, -np.sin(YAW)]) * 0.003   # shaft axis (x,z)
-RHO, YF = 0.060, 0.025        # bend radius, foot axis height
+RHO, YF = 0.060, 0.025
+SLAB_H = 0.014        # bend radius, foot axis height
 U_TOE = 0.121
 BOX = np.array([[0.535, -0.002, 0.086], [0.635, 0.112, 0.252]])
 
@@ -23,10 +24,10 @@ def pt(u, y):                 # point on the axis in (forward distance from shaf
 def stations():
     """list of (axis point, tangent) from the top of the shaft down, round the ankle bend, to the toe."""
     S = []
-    for y in [0.174, 0.170, 0.152, 0.134, 0.116, 0.100, 0.093, 0.086]:
+    for y in [0.174, 0.170, 0.145, 0.120, 0.100, 0.092]:
         S.append((pt(0, y), -Y3, "shaft", y))
     E0 = np.array([0.0, YF + RHO]); C0 = np.array([0.0, YF]); E1 = np.array([RHO, YF])
-    for t in np.linspace(0, 1, 7):                        # quadratic bezier round the ankle: the mid ring's outer ray hits the heel corner
+    for t in np.linspace(0, 1, 10):                        # quadratic bezier round the ankle: the mid ring's outer ray hits the heel corner
         p = (1 - t) ** 2 * E0 + 2 * t * (1 - t) * C0 + t * t * E1
         d = 2 * (1 - t) * (C0 - E0) + 2 * t * (E1 - C0); d /= np.linalg.norm(d)
         S.append((pt(p[0], p[1]), d[0] * F3 + d[1] * Y3, "bend", np.arctan2(d[0], -d[1])))
@@ -38,6 +39,41 @@ def stations():
 def frame(T, ph):
     U = np.cos(ph) * F3 + np.sin(ph) * Y3
     return U, np.cross(T, U)
+
+
+def slab(C):
+    """Closed sole slab: outline traced from horizontal casts at the sole, flat bottom (y=0) and flat top (y=SLAB_H),
+    each closed by an inset ring + quad zipper across the foot axis (2 tris at the toe and heel)."""
+    sd = np.array([np.cos(YAW), 0, -np.sin(YAW)])
+    c0 = SH + F3 * 0.042 + sd * 0.009
+    th = np.arange(NS) * 2 * np.pi / NS
+    def outline(y):
+        A = np.array([c0[0], y, c0[2]]); P = []
+        for t in th:
+            d = np.cos(t) * F3 + np.sin(t) * sd
+            ok = [h[0] for h in C.all(A, d, 0.2) if (not h[2]) and (BOX[0] <= A + d * h[0]).all() and (A + d * h[0] <= BOX[1]).all()]
+            P.append(A + d * max(ok))
+        return np.array(P)
+    ob = outline(0.006); ob[:, 1] = 0.0
+    ot = outline(SLAB_H - 0.002); ot[:, 1] = SLAB_H
+    cb = ob.mean(0); ct = ot.mean(0)
+    ib = cb + (ob - cb) * 0.55; it = ct + (ot - ct) * 0.55
+    V = np.vstack([ob, ot, ib, it]); n = NS
+    Q = []
+    for j in range(n):                                       # wall (outward)
+        j2 = (j + 1) % n; Q.append([j, j2, n + j2, n + j])
+    for j in range(n):                                       # bottom annulus
+        j2 = (j + 1) % n; Q.append([j, 2 * n + j, 2 * n + j2, j2])
+    for j in range(n):                                       # top annulus
+        j2 = (j + 1) % n; Q.append([n + j, n + j2, 3 * n + j2, 3 * n + j])
+    h = n // 2
+    for base, top in ((2 * n, False), (3 * n, True)):        # zipper caps
+        for j in range(1, h - 1):
+            q = [base + j, base + n - j, base + n - j - 1, base + j + 1]
+            Q.append(q if not top else q[::-1])
+        t1 = [base + 0, base + n - 1, base + 1]; t2 = [base + h, base + h - 1, base + h + 1]
+        Q += [t1, t2] if not top else [t1[::-1], t2[::-1]]
+    return V, Q
 
 
 def main():
@@ -72,14 +108,28 @@ def main():
         if np.isnan(R).any():
             idx = np.arange(NS); g = ~np.isnan(R)
             R = np.interp(idx, np.r_[idx[g] - NS, idx[g], idx[g] + NS], np.tile(R[g], 3))
-        rows.append(A + R[:, None] * D)
+        if kind == "bend":
+            # heel: the fanned outer-side vertices are slid straight back (along -F3) onto the vertical heel wall
+            Pq = A + R[:, None] * D
+            for j in range(NS):
+                wgt = float(np.clip((-(D[j] @ F3) - 0.05) / 0.5, 0, 1))
+                if wgt > 0 and Pq[j, 1] > 0.004:
+                    h = C.first(Pq[j], -F3, 0.08)
+                    if h and h[1] @ F3 < 0: Pq[j] = Pq[j] + (h[0] - Pq[j]) * wgt
+            R = np.linalg.norm(Pq - A, axis=1)
+            D = (Pq - A) / R[:, None]
+        rows.append((A, D, R))
         if kind == "shaft" and abs(par - 0.100) < 1e-9: hold = R * 0.97
     for i, r in enumerate(rows):                       # hidden shaft rows (under the trouser): hold radius, inward lip on top
-        if isinstance(r, tuple):
+        if isinstance(r, tuple) and r[2] is not None and not isinstance(r[2], np.ndarray):
             A, D, y = r; rows[i] = A + (hold - (0.006 if y > 0.173 else 0.0))[:, None] * D
+        elif isinstance(r, tuple):
+            A, D, R = r; Pp = A + R[:, None] * D
+            Rr = np.where(Pp[:, 1] < SLAB_H + 0.004, R - 0.003, R)       # lowest part of the upper sinks 3 mm into the slab
+            rows[i] = A + Rr[:, None] * D
     P = np.array(rows)
     # smooth lightly around the rings, keep the sole flat
-    P[:, :, 1] = np.where(P[:, :, 1] < 0.004, 0.0, P[:, :, 1])
+    P[:, :, 1] = np.maximum(P[:, :, 1], 0.004)      # the upper ends inside the sole slab
     # toe cap: shrink ring + pole
     last = P[-1]; cen = last.mean(0); pole = cen + F3 * 0.010
     domes = [cen + F3 * 0.0035 + (last - cen) * 0.85, cen + F3 * 0.0075 + (last - cen) * 0.55]
@@ -88,6 +138,8 @@ def main():
     for j in range(NS):
         a, b = r0 + j, r0 + (j + 1) % NS
         Q.append([b, a, k] if "--flip" in sys.argv else [a, b, k])
+    Vs, Qs = slab(C)
+    V, Q = B.merge([(V, Q), (Vs, Qs)])
     meshio.save_obj("parts/boot_l.obj", V, Q)
     Vr, Qr = B.mirror_x(V, Q); meshio.save_obj("parts/boot_r.obj", Vr, Qr)
     print(len(V), len(Q), "rings", len(P) + 1)

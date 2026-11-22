@@ -154,3 +154,19 @@ def weld(V, polys, tol=1e-6):
 def mirror_x(V, polys, cx=CX):
     V2 = V.copy(); V2[:, 0] = 2 * cx - V2[:, 0]
     return V2, [list(p)[::-1] for p in polys]
+
+
+def solidify(V, Q, t):
+    """Thin double-sided shell from an open sheet: inner copy offset by -t along vertex normals, boundary bridged."""
+    n = np.zeros_like(V)
+    for q in Q:
+        fn = np.cross(V[q[1]] - V[q[0]], V[q[-1]] - V[q[0]]); fn /= np.linalg.norm(fn) + 1e-12
+        for a in q: n[a] += fn
+    n /= np.linalg.norm(n, axis=1, keepdims=True) + 1e-12
+    N = len(V); V2 = np.vstack([V, V - n * t]); Q2 = [list(q) for q in Q] + [[a + N for a in q[::-1]] for q in Q]
+    he = set()
+    for q in Q:
+        for i in range(len(q)): he.add((q[i], q[(i + 1) % len(q)]))
+    for (a, b) in he:
+        if (b, a) not in he: Q2.append([b, a, a + N, b + N])
+    return V2, Q2

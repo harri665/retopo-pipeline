@@ -5,7 +5,7 @@ from retopo import build as B, meshio
 
 CXH, CZH = 0.4645, 0.14
 PH = np.arange(0, 97, 8, float)                  # radial columns, degrees from the back
-WS = np.array([0.05, 0.062, 0.074, 0.086, 0.100])  # wing columns: distance along the leaf
+WS = np.array([0.05, 0.062, 0.074, 0.086, 0.096])  # wing columns: distance along the leaf
 THW = np.radians(57)
 DIRW = np.array([np.sin(THW), 0, np.cos(THW)])
 TW = np.array([np.cos(THW), 0, -np.sin(THW)])
@@ -18,7 +18,7 @@ def ytop_r(ap):
 
 
 def ybase_r(ap):
-    return np.interp(ap, [0, 30, 45, 60, 75, 90, 105], [.800, .805, .82, .835, .84, .84, .84])
+    return np.interp(ap, [0, 30, 45, 60, 75, 90, 105], [.800, .805, .82, .83, .83, .83, .83])
 
 
 def cap_r(ap):
@@ -26,11 +26,11 @@ def cap_r(ap):
 
 
 def ytop_w(s):
-    return np.interp(s, [.05, .075, .10], [.882, .877, .868])
+    return np.interp(s, [.05, .096], [.882, .866])
 
 
 def ybase_w(s):
-    return np.interp(s, [.05, .075, .10], [.80, .82, .855])
+    return np.interp(s, [.05, .096], [.815, .852])
 
 
 def half(C):

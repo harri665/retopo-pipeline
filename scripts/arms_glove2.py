@@ -11,18 +11,18 @@ NS = 8
 XW = 0.838
 # base point on the knuckle line, tip surface point (guesses read from renders)
 G = {
-    'A': ([0.890, 0.7385, 0.192], [0.927, 0.7305, 0.205]),
-    'B': ([0.888, 0.722, 0.190], [0.9275, 0.710, 0.201]),
-    'C': ([0.884, 0.709, 0.189], [0.921, 0.697, 0.197]),
-    'D': ([0.874, 0.700, 0.187], [0.903, 0.684, 0.191]),
+    'A': ([0.8925, 0.7385, 0.191], [0.927, 0.7305, 0.205]),
+    'B': ([0.8895, 0.7205, 0.189], [0.9275, 0.710, 0.201]),
+    'C': ([0.885, 0.7065, 0.188], [0.921, 0.697, 0.197]),
+    'D': ([0.876, 0.6935, 0.186], [0.903, 0.684, 0.191]),
     'T': ([0.862, 0.744, 0.190], [0.889, 0.762, 0.222]),
 }
-FSTA = np.array([0, 0.12, 0.25, 0.31, 0.37, 0.52, 0.59, 0.66, 0.82, 0.95])
-TSTA = np.array([0, 0.14, 0.27, 0.34, 0.41, 0.56, 0.63, 0.70, 0.85, 0.96])
+FSTA = np.array([0, 0.10, 0.22, 0.31, 0.40, 0.58, 0.67, 0.76, 0.88, 1.0])
+TSTA = np.array([0, 0.11, 0.24, 0.33, 0.42, 0.58, 0.67, 0.76, 0.88, 1.0])
 RTIP = 0.0068
 
 
-def skel(H, base, tip, n=18, rad=0.0092, iters=6, tipback=RTIP):
+def skel(H, base, tip, n=18, rad=0.0105, iters=8, tipback=RTIP):
     base = np.array(base, float); tip = np.array(tip, float)
     d = (tip - base) / np.linalg.norm(tip - base); end = tip - d * tipback
     A = base[None] + (end - base)[None] * np.linspace(0, 1, n)[:, None]
@@ -34,8 +34,7 @@ def skel(H, base, tip, n=18, rad=0.0092, iters=6, tipback=RTIP):
             m = (np.abs(al) < 0.0035) & (np.linalg.norm(pp, axis=1) < rad)
             if m.sum() > 6:
                 new = 0.5 * A[i] + 0.5 * H[m].mean(0); shift = new - A0[i]
-                nn = np.linalg.norm(shift)
-                A[i] = A0[i] + shift * min(1, 0.004 / (nn + 1e-12))
+                A[i] = A0[i] + np.clip(shift, [-0.003, -0.0025, -0.008], [0.003, 0.0025, 0.008])
         A[1:-1] = uniform_filter1d(A, 3, axis=0, mode='nearest')[1:-1]
     A[0] = A[0] if False else A[0]
     return A
@@ -62,7 +61,7 @@ def frames_side(ax):
 def finger(C, A, nsta, spacing_cap, base_fix_x=None):
     ax = B.resample_polyline(A, at=nsta)
     T, D = frames_side(ax)
-    R = rings(C, ax, D, 0.0090)
+    R = rings(C, ax, D, 0.0098)
     R = B.smooth(R, around=1, along=1)
     # sides (+y / -y) must not overlap neighbouring fingers
     for j in (0, 4): R[:, j] = np.minimum(R[:, j], spacing_cap[j // 4])
@@ -100,7 +99,7 @@ def orient(V, polys, C):
 def build(C):
     H = hand_points()
     names = 'ABCD'
-    sk = {k: skel(H, *G[k], tipback=RTIP if k != 'T' else 0.0075) for k in G}
+    sk = {k: skel(H, *G[k], tipback=RTIP if k != 'T' else 0.0045) for k in G}
     cy = {k: sk[k][0, 1] for k in names}
     ys = [cy[k] for k in names]
     bp = [sk[k][0] for k in names]
@@ -148,7 +147,10 @@ def build(C):
             c = cen_x(x)
             # direction in the y-z plane toward the end-ring vertex (seen from the axis at that x)
             dv = end[j, 1:] - ce_end[1:]; dv /= np.linalg.norm(dv)
-            d = np.array([0, dv[0], dv[1]])
+            a_i = 0.018 + 0.017 * u[i]; b_i = 0.017 - 0.006 * u[i]; psi = 2 * np.pi * j / NP
+            du = np.array([a_i * np.cos(psi), b_i * np.sin(psi)]); du /= np.linalg.norm(du)
+            w = u[i] ** 1.5; dm = (1 - w) * du + w * dv; dm /= np.linalg.norm(dm)
+            d = np.array([0, dm[0], dm[1]])
             h = None
             hits = C.all(c + d * 0.09, -d, 0.09)
             for (t, f, enter) in hits:
@@ -164,11 +166,17 @@ def build(C):
             v = Pp[i, :, dim]; ok = ~np.isnan(v)
             if (~ok).any() and ok.sum() > 3:
                 idx = np.arange(NP); Pp[i, :, dim] = np.interp(idx, np.r_[idx[ok] - NP, idx[ok], idx[ok] + NP], np.tile(v[ok], 3))
-    # light smoothing of the interior rows around the ring
-    for _ in range(1):
-        Q = Pp.copy()
-        for i in range(1, PR - 1): Q[i] = 0.25 * np.roll(Pp[i], 1, 0) + 0.5 * Pp[i] + 0.25 * np.roll(Pp[i], -1, 0)
-        Pp = Q
+    # relax the interior rows (even spacing) and snap back onto the source
+    for it in range(8):
+        Q_ = Pp.copy()
+        for i in range(1, PR - 1):
+            Q_[i] = 0.25 * np.roll(Pp[i], 1, 0) + 0.5 * Pp[i] + 0.25 * np.roll(Pp[i], -1, 0)
+            Q_[i] = 0.7 * Q_[i] + 0.15 * Pp[i - 1] + 0.15 * Pp[i + 1]
+        for i in range(1, PR - 1):
+            for j in range(NP):
+                if Q_[i, j, 0] > 0.856 and tk.query(Q_[i, j])[0] > 0.0095:
+                    q = C.nearest(Q_[i, j])[0]; Q_[i, j] = 0.3 * Q_[i, j] + 0.7 * q
+        Pp = Q_
     # wrist tuck: limit radius about the axis for the cuff rows
     for i in range(PR - 1):
         for j in range(NP):

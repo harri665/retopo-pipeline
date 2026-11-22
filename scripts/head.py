@@ -16,7 +16,7 @@ YTOPROW = 0.905
 
 
 def build(C):
-    m = np.clip((62 - AD) / 16.0, 0, 1)
+    m = np.clip((52 - AD) / 12.0, 0, 1)
     y_e = 0.86 + 0.00055 * np.minimum(AD, 45)
     yEm = y_e - 0.004 * (1 - m); yEp = y_e + 0.004 * (1 - m)
     cEm = yEm - 0.004 * m; cEp = yEp + 0.004 * m
@@ -37,9 +37,14 @@ def build(C):
             p = np.array([CXH, rows_c[k][j], CZH])
             h = C.first(p, D[j], 0.2)
             if h: R[k, j] = h[3]
-    cap = np.full(N, 0.062)
     for k in range(nneck):
+        yk = np.array(rows_c[k]) if np.ndim(rows_c[k]) else np.full(N, rows_c[k])
+        Rn = np.interp(yk, [0.76, 0.80, 0.85], [0.046, 0.042, 0.038])
+        cap = Rn + 0.006
+        front = (AD < 32) & (yk >= 0.79)       # the scarf V is visible between the collar wings: follow the source
+        cap = np.where(front, 0.07, cap)
         R[k][R[k] > cap] = np.nan
+        R[k] = np.where(np.isnan(R[k]), Rn, R[k])
     R = B.fill_nan(R, wrap=True)
     # smooth the neck, keep mask creases
     Rn = R[:nneck - 1].copy()
@@ -58,7 +63,36 @@ def build(C):
     last = (K + 1) * N
     for j in range(N):
         Q.append([last + j, last + (j + 1) % N, k])
+    V, Q = add_ears(V, Q)
     return V, Q
+
+
+def ear_shell(sign):
+    th = np.radians(73.0)
+    rad = np.array([np.sin(th), 0, np.cos(th)]); tan = np.array([np.cos(th), 0, -np.sin(th)])
+    c = np.array([CXH, 0.879, CZH])
+    rings = []
+    ph = np.arange(8) * 2 * np.pi / 8
+    for rho, h in [(0.35, 0.0075), (0.7, 0.0055), (1.0, -0.0015)]:
+        pts = []
+        for p in ph:
+            a = 0.0085 * rho * np.cos(p); b = 0.0135 * rho * np.sin(p)
+            pts.append(c + rad * (0.037 + h) + tan * a + np.array([0, b, 0]))
+        rings.append(pts)
+    P = np.array(rings)
+    if sign < 0: P[:, :, 0] = 2 * CXH - P[:, :, 0]
+    V, Q = B.grid_mesh(P, wrap_u=True, flip=(sign > 0))
+    apex = c + rad * 0.0445
+    if sign < 0: apex[0] = 2 * CXH - apex[0]
+    V = np.vstack([V, apex]); k = len(V) - 1
+    for j in range(8):
+        Q.append([(j + 1) % 8, k, j] if sign > 0 else [j, k, (j + 1) % 8])
+    return V, Q
+
+
+def add_ears(V, Q):
+    parts = [(V, Q), ear_shell(1), ear_shell(-1)]
+    return B.merge(parts)
 
 
 if __name__ == "__main__":
