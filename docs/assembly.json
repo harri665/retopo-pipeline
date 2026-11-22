@@ -1,0 +1,49 @@
+{
+ "total_tris": 25086,
+ "parts": {
+  "belt": 768,
+  "boot_l": 1692,
+  "boot_r": 1692,
+  "bracer_l": 640,
+  "bracer_r": 640,
+  "buckle": 216,
+  "coat_upper": 1696,
+  "collar": 978,
+  "glove_l": 1212,
+  "glove_r": 1212,
+  "hat": 1120,
+  "head": 1240,
+  "hip_flaps": 1280,
+  "lapels": 376,
+  "pauldron_l": 672,
+  "pauldron_r": 672,
+  "skirt": 4476,
+  "sleeve_l": 480,
+  "sleeve_r": 480,
+  "trousers": 2288,
+  "underskirt": 1256
+ },
+ "problems": {},
+ "new_to_src": {
+  "mean": 0.004253724004728059,
+  "p95": 0.012054185218020149,
+  "max": 0.060994708454561654
+ },
+ "src_to_new": {
+  "mean": 0.00434844392590046,
+  "p95": 0.016022578238761347,
+  "max": 0.05557899083770072,
+  "frac_over_0p01": 0.1266795681503373
+ },
+ "silhouette_iou": {
+  "front": 0.9492,
+  "fl": 0.9414,
+  "left": 0.951,
+  "bl": 0.9468,
+  "back": 0.9493,
+  "br": 0.9416,
+  "right": 0.9507,
+  "fr": 0.9467,
+  "min": 0.9414
+ }
+}

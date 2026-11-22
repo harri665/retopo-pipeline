@@ -69,7 +69,7 @@ def export(parts, tag="LOD0"):
     s = HEIGHT_CM / 100.0 / 0.9993
     for n, (V, P) in parts.items():
         W = np.stack([(V[:, 0] - B.CX) * s, -V[:, 2] * s + 0.165 * s, V[:, 1] * s], 1)  # to Blender Z-up, -Y front, feet at 0
-        me = bpy.data.meshes.new(n); me.from_pydata(W.tolist(), [], [list(map(int, p)) for p in P]); me.update()
+        me = bpy.data.meshes.new(n); me.from_pydata(W.tolist(), [], [list(map(int, p)) for p in P]); me.update(); me.validate()
         for poly in me.polygons: poly.use_smooth = True
         ob = bpy.data.objects.new(f"SM_Trooper_{n}", me); bpy.context.scene.collection.objects.link(ob)
     d = os.path.join(meshio.ROOT, "export"); os.makedirs(d, exist_ok=True)

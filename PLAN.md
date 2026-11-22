@@ -1,7 +1,7 @@
 # Retopology plan: Infantry Ranged Trooper
 
 Scope: **topology only**. No UVs, bakes, textures or materials for now.
-Status: inspection done, toolchain proven, no pipeline code or parts built yet.
+Status: topology pass 1 complete, see `QA.md`. Next candidates: collar wings, skirt hem, underskirt sides, deformation test.
 
 ## Inputs
 
