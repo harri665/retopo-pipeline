@@ -8,7 +8,7 @@ ARM_AXIS_L = np.array([[0.56, 0.775, 0.132], [0.60, 0.785, 0.133], [0.66, 0.766,
                        [0.78, 0.741, 0.155], [0.84, 0.733, 0.175], [0.87, 0.730, 0.187]])
 # Approximate landmarks along x on the left arm: pauldron covers x<0.66, elbow ~0.72, bracer 0.775-0.865,
 # wrist ~0.865, hand to 0.93.
-# Heights: boot top ~0.17, knee ~0.30, crotch ~0.55, belt 0.50-0.53, armpit ~0.70, shoulder top ~0.84,
+# Heights: boot top ~0.17, knee ~0.30, crotch ~0.55, belt 0.623-0.651, hip flaps 0.47-0.636, armpit ~0.70, shoulder top ~0.84,
 # chin ~0.80, hat brim ~0.90, top 1.0. Body centre z ~0.165.
 
 ARMHOLE_SEGS = 16

@@ -71,7 +71,7 @@ def hem_y(th):
         r = ray(y, th)
         if r is None or r < a * y + b - 0.03 or r > a * y + b + 0.03: break
         y_last = y
-    return max(y_last, 0.175)
+    return y_last
 
 
 def panel(sign, th_lo_fn, th_hi, ncols):

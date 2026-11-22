@@ -22,7 +22,7 @@ Status: inspection done, toolchain proven, no pipeline code or parts built yet.
   tattered underskirt strips.
 - Full legs exist under the coat; crotch arch at about y = 0.55.
 - Torso from about y = 0.55 to 0.70 is one fused blob (coat = body).
-- Rough heights: hat brim about 0.90, head 0.80-0.90, belt about 0.50-0.53, boot tops about 0.17.
+- Rough heights: hat brim about 0.90, head 0.80-0.90, belt 0.623-0.651 (hip flaps 0.47-0.636), boot tops about 0.17.
 
 ## Defaults (user has not overridden)
 

@@ -22,7 +22,9 @@ def centre(C, y, c0, rmax=0.2):
 
 
 def build(C):
-    ys = np.r_[np.arange(Y0, 0.165, 0.01), np.arange(0.165, YCAST + 1e-6, 0.0175)]
+    # cuff band: rings at its bottom edge and top edge, then the shin / blouse / knee / thigh
+    ys = np.r_[[0.115, 0.122, 0.130, 0.138], np.arange(0.150, 0.22, 0.015), [0.222, 0.236, 0.25, 0.264, 0.28, 0.292, 0.304, 0.316],
+               np.arange(0.332, YCAST + 1e-6, 0.0175)]
     ys = ys[ys <= YCAST + 1e-9]
     ysU = np.array([YCAST + 0.0165, 0.50, YC, 0.55, YT])   # rows above the measured part
     ysU = ysU[ysU > ys[-1] + 0.004]
@@ -47,9 +49,9 @@ def build(C):
     # reject far hits (other items): replace outliers with NaN
     med = np.nanmedian(R, axis=1, keepdims=True)
     R[(R > 1.5 * med) | (R < 0.6 * med)] = np.nan
-    R = B.fill_nan(R); R = B.smooth(R, around=2, along=2)
+    R = B.fill_nan(R); R = B.smooth(R, around=1, along=0)
     # upper rows: hold last radius and grow slightly
-    Rfull = np.vstack([R, np.repeat(R[-1:], len(ysU), 0) * (1 + 0.8 * (ysU - ys[-1]))[:, None]])
+    Rfull = np.vstack([R, np.repeat(R[-1:], len(ysU), 0) * (1 + 1.6 * (ysU - ys[-1]))[:, None]])
     # directions for all rows (vertical axis)
     th = np.arange(NS) * 2 * np.pi / NS
     Dall = np.stack([np.sin(th), np.zeros(NS), np.cos(th)], 1)     # x=sin, z=cos
@@ -59,7 +61,7 @@ def build(C):
     for i, y in enumerate(allys):
         if y > YCAST:
             t = (y - YCAST) / (YT - YCAST)
-            P[i, :, 0] = CX + (P[i, :, 0] - CX) * (1 - 0.06 * t)
+            P[i, :, 0] = CX + (P[i, :, 0] - CX) * (1 - 0.03 * t)
             zc = AX[i, 2]; P[i, :, 2] = zc + (P[i, :, 2] - zc) * (1 + 0.10 * t)
     # crotch: inner arc verts blend onto the midplane x = CX, with symmetric z
     for i, y in enumerate(allys):

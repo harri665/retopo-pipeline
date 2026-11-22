@@ -16,8 +16,8 @@ def build(C):
     # take clean rows only; fill holes around each ring then along
     Rf = B.fill_nan(R)
     # last clean row is held to the end: taper so the end sits inside the bracer
-    t = np.clip((xs - 0.735) / (x1 - 0.735), 0, 1); t = t * t * (3 - 2 * t)
-    Rf = Rf * (1 - 0.14 * t)[:, None]
+    t = np.clip((xs - 0.725) / (x1 - 0.725), 0, 1); t = t * t * (3 - 2 * t)
+    Rf = Rf * (1 - 0.22 * t)[:, None]
     Rf = B.smooth(Rf, around=2, along=1)
     P = B.rings_to_points(A, Rf, D)
     # row 0 = armhole ring exactly; blend rows 1..k0 from it into the first clean ring

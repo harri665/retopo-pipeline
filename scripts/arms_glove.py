@@ -84,15 +84,45 @@ def orient(V, polys, C):
     if vote < 0: out = [p[::-1] for p in out]
     return out
 
+def _seg_cross(p1, p2, p3, p4):
+    d = lambda a, b, c: (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])
+    return d(p1, p2, p3) * d(p1, p2, p4) < 0 and d(p3, p4, p1) * d(p3, p4, p2) < 0
+
+
+def cdt(pts, constraints):
+    """Delaunay then edge-flip recovery of constraint edges. Returns list of triangles (index triples)."""
+    tris = [tuple(t) for t in Delaunay(pts).simplices]
+    def edges_of(t): return [(t[0], t[1]), (t[1], t[2]), (t[2], t[0])]
+    for (a, b) in constraints:
+        for _ in range(200):
+            E = {}
+            for ti, t in enumerate(tris):
+                for (u, v) in edges_of(t): E.setdefault(frozenset((u, v)), []).append(ti)
+            if frozenset((a, b)) in E: break
+            done = False
+            for e, tl in E.items():
+                if len(tl) != 2: continue
+                u, v = tuple(e)
+                if a in (u, v) or b in (u, v): continue
+                if not _seg_cross(pts[a], pts[b], pts[u], pts[v]): continue
+                t1, t2 = tris[tl[0]], tris[tl[1]]
+                r = [x for x in t1 if x not in (u, v)][0]; s_ = [x for x in t2 if x not in (u, v)][0]
+                if not _seg_cross(pts[r], pts[s_], pts[u], pts[v]): continue
+                new1, new2 = (r, s_, u), (s_, r, v)
+                tris[tl[0]] = new1; tris[tl[1]] = new2; done = True; break
+            if not done: break
+    return tris
+
+
 def build(C):
     H = hand_points()
     sk = {k: skeleton(H, k) for k in GUESS}
     # ---------- palm tube
     xs = np.linspace(XW, XC, PROWS)
     cen = np.stack([xs, np.interp(xs, AX[:, 0], AX[:, 1]), np.interp(xs, AX[:, 0], AX[:, 2])], 1)
-    cen[:, 1] = np.interp(xs, [0.838, 0.86, 0.885], [0.7317, 0.722, 0.720])
-    cen[:, 2] = np.interp(xs, [0.838, 0.86, 0.885], [0.1745, 0.188, 0.190])
-    aa = np.interp(xs, [0.838, 0.850, 0.865, 0.885], [0.018, 0.026, 0.037, 0.040])
+    cen[:, 1] = np.interp(xs, [0.838, 0.86, 0.885], [0.7317, 0.722, 0.716])
+    cen[:, 2] = np.interp(xs, [0.838, 0.86, 0.885], [0.1745, 0.176, 0.181])
+    aa = np.interp(xs, [0.838, 0.850, 0.865, 0.885], [0.018, 0.026, 0.036, 0.033])
     bb = np.interp(xs, [0.838, 0.850, 0.865, 0.885], [0.017, 0.015, 0.012, 0.011])
     phi = np.arange(NP) * 2 * np.pi / NP
     Tk = sk['T']; tk = cKDTree(Tk[3:])
@@ -110,7 +140,9 @@ def build(C):
     Pp = cen[:, None, :] + Rm[:, :, None] * Dm
     # wrist: stay inside the bracer (bracer inner radius ~0.015 at x<0.848)
     for i in range(PROWS):
-        if xs[i] < 0.846: Pp[i] = cen[i] + (Pp[i] - cen[i]) * 0.88
+        lim = np.interp(xs[i], [0.838, 0.848, 0.862], [0.0150, 0.0155, 0.06])
+        dv = Pp[i] - cen[i]; dn = np.linalg.norm(dv, axis=1, keepdims=True)
+        Pp[i] = cen[i] + dv * np.minimum(1, lim / dn)
     # ---------- thumb
     Th = sk['T']
     palm_tree = cKDTree(Pp.reshape(-1, 3))
@@ -166,6 +198,9 @@ def build(C):
     xc = XC
     for name in 'ABCD':
         A = sk[name]
+        k0 = int(np.nonzero(A[:, 0] >= xc)[0][0])
+        t0 = (xc - A[k0 - 1, 0]) / (A[k0, 0] - A[k0 - 1, 0]) if k0 > 0 else 0
+        A = np.vstack([A[k0 - 1] + t0 * (A[k0] - A[k0 - 1]), A[k0:]]) if k0 > 0 else A
         ax, R, D, T = finger_rings(C, A, name)
         # base ring into the cap plane
         P = ax[:, None, :] + R[:, :, None] * D
@@ -188,18 +223,39 @@ def build(C):
             for j in range(NS):
                 a, b = fb[n] + i * NS + j, fb[n] + i * NS + (j + 1) % NS; Q.append([a, b, b + NS, a + NS])
         tip_cap(fb[n], len(P), ax[-1], T[-1], R[-1].mean())
+    # taper the palm into a dome that ends on an ellipse enclosing the four finger base rings
+    ringpts = np.array([verts[fb[n] + j] for n in 'ABCD' for j in range(NS)])
+    cE = ringpts.mean(0); ymin, ymax = ringpts[:, 1].min(), ringpts[:, 1].max(); zmin, zmax = ringpts[:, 2].min(), ringpts[:, 2].max()
+    cE = np.array([XC, (ymin + ymax) / 2, (zmin + zmax) / 2])
+    for marg in np.arange(0.0042, 0.012, 0.0004):
+        ay, az = (ymax - ymin) / 2 + marg, (zmax - zmin) / 2 + marg
+        E = np.stack([np.full(NP, XC), cE[1] + ay * np.cos(phi), cE[2] + az * np.sin(phi)], 1)
+        poly = Path(E[:, 1:])
+        if all(poly.contains_point(q[1:]) for q in ringpts) and min(np.linalg.norm(E[:, None, 1:] - ringpts[None, :, 1:], axis=2).min(1)) > 0.0030: break
+    print('dome margin', marg)
+    X0D = 0.858
+    for i in range(PROWS):
+        if xs[i] <= X0D: continue
+        w = np.clip((xs[i] - X0D) / (XC - X0D), 0, 1); w = w * w * (3 - 2 * w)
+        for j in range(NP): verts[i * NP + j] = (1 - w) * np.array(verts[i * NP + j]) + w * E[j]
     # ---------- knuckle cap: Delaunay in (y, z) between the palm end ring and the four finger base rings
     pend = [(PROWS - 1) * NP + j for j in range(NP)]
     holes = [[fb[n] + j for j in range(NS)] for n in 'ABCD']
     allv = pend + sum(holes, [])
+    cs = [np.mean([verts[i] for i in h], axis=0) for h in holes]
+    for k in range(3):                                   # Steiner points between neighbouring fingers
+        verts.append(0.5 * (cs[k] + cs[k + 1])); allv.append(len(verts) - 1)
+    for k, (a_, b_) in enumerate([(cs[0], cs[1]), (cs[2], cs[3])]):
+        pass
     pts = np.array([verts[i][1:] for i in allv])
     # force the cap plane
     for i in pend + sum(holes, []): pass
-    tri = Delaunay(pts)
+    cons = [(i, (i + 1) % NP) for i in range(NP)] + [(NP + k * NS + j, NP + k * NS + (j + 1) % NS) for k in range(4) for j in range(NS)]
+    tri_s = cdt(pts, cons)
     outer = Path(pts[:NP]); hp = [Path(pts[NP + k * NS: NP + (k + 1) * NS]) for k in range(4)]
     cap = []
-    for s in tri.simplices:
-        c = pts[s].mean(0)
+    for s in tri_s:
+        c = pts[list(s)].mean(0)
         if not outer.contains_point(c): continue
         if any(h.contains_point(c) for h in hp): continue
         cap.append([allv[i] for i in s])
