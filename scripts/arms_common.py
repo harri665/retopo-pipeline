@@ -34,3 +34,26 @@ def smooth_rows(P, passes, fixed_first=True, fixed_last=False, lo=0, hi=None):
             Q[i] = 0.25 * P[i - 1] + 0.5 * P[i] + 0.25 * P[i + 1]
         P = Q
     return P
+
+
+def orient_consistent(polys):
+    """BFS over shared edges so all polygons wind the same way; returns new polys (first polygon of each component unchanged)."""
+    polys = [list(p) for p in polys]
+    emap = {}
+    for fi, p in enumerate(polys):
+        for i in range(len(p)):
+            a, b = p[i], p[(i + 1) % len(p)]; emap.setdefault((min(a, b), max(a, b)), []).append(fi)
+    seen = np.zeros(len(polys), bool); flip = np.zeros(len(polys), bool)
+    def dedges(fi):
+        p = polys[fi]; return [((p[i], p[(i + 1) % len(p)]) if not flip[fi] else (p[(i + 1) % len(p)], p[i])) for i in range(len(p))]
+    for s in range(len(polys)):
+        if seen[s]: continue
+        seen[s] = True; st = [s]
+        while st:
+            f = st.pop()
+            for (a, b) in dedges(f):
+                for g in emap[(min(a, b), max(a, b))]:
+                    if g == f or seen[g]: continue
+                    if (a, b) in set(dedges(g)): flip[g] = True
+                    seen[g] = True; st.append(g)
+    return [p[::-1] if flip[i] else p for i, p in enumerate(polys)]

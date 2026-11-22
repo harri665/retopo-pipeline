@@ -11,7 +11,7 @@ N = 48
 Y0, DY = 0.635, 0.0125
 NROW = 18                                   # k=0..17, y=0.635..0.8475
 NECK_K = 17
-NECK_C = np.array([CX, Y0 + DY * NECK_K, 0.135]); NECK_RX, NECK_RZ = 0.062, 0.056
+NECK_C = np.array([CX, Y0 + DY * NECK_K, 0.14]); NECK_RX, NECK_RZ = 0.034, 0.034
 CAST_ALL_K = 5                              # rows 0..5 (y<=0.6975) cast on every column
 J0 = 0                                      # left hole block columns J0..J0+4
 BLK_ROWS = (8, 12)                          # hole block rows (bottom, top)
@@ -43,7 +43,7 @@ def build():
     valid = np.zeros((NROW, N), bool)
     R = np.full((NROW, N), np.nan)
     side = set()
-    for c in range(-4, 9): side.add(c % N); side.add((N // 2 - c) % N)
+    for c in range(-4, 7): side.add(c % N); side.add((N // 2 - c) % N)
     for k in range(2, 14):
         for j in range(N):
             if np.isnan(Rraw[k, j]): continue
@@ -141,6 +141,20 @@ def build():
                 nb = [P[i - 1, j], P[i + 1, j], P[i, j - 1], P[i, (j + 1) % N]]
                 Q[i, j] = 0.5 * P[i, j] + 0.5 * np.mean(nb, 0)
         P = Q
+    # keep the shoulder-top rows (14..16) inside the collar's inner layer (if parts/collar.obj exists)
+    import os
+    if os.path.exists("parts/collar.obj"):
+        Vc, Pc = meshio.load_obj("parts/collar.obj"); Fc, _ = meshio.triangulate(Pc)
+        Cc = B.Caster(Vc, Fc.astype(int))
+        for i in range(14, NECK_K):
+            for j in range(N):
+                d = P[i, j] - np.array([CX, 0, 0.14]); d[1] = 0; r = np.linalg.norm(d)
+                if r < 1e-6: continue
+                d /= r
+                hs = Cc.all(np.array([CX, P[i, j, 1], 0.14]), d, 0.2)
+                if hs and r > hs[0][0] - 0.003:
+                    rn = max(hs[0][0] - 0.003, 0.03)
+                    P[i, j] = np.array([CX, P[i, j, 1], 0.14]) + d * rn
     V = P.reshape(-1, 3).copy()
     idx = lambda i, j: i * N + (j % N)
     quads = []

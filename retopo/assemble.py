@@ -44,7 +44,23 @@ def main():
     for v in ["front", "fl", "left", "back"]:
         cam = R.Cam(v, H=1100); f, _ = R.rasterize(SV, SF, cam); ims.append(R.shade(SV, SF, cam, f)); labs.append("source " + v)
     R.sheet(ims, labs, cols=4).save(os.path.join(meshio.ROOT, "out", "assembly.png"))
-    if "--export" in sys.argv: export(parts)
+    if "--export" in sys.argv:
+        export(parts)
+        for tag, frac in (("LOD1", 0.5), ("LOD2", 0.25)):
+            lod = make_lod(parts, frac); export(lod, tag)
+            print(tag, "tris", sum(len(meshio.triangulate(P)[0]) for _, P in lod.values()))
+
+
+def make_lod(parts, frac):
+    """Quadric decimation per part (open borders preserved by the simplifier's border weighting)."""
+    import fast_simplification
+    out = {}
+    for n, (V, P) in parts.items():
+        F, _ = meshio.triangulate(P)
+        if len(F) < 60: out[n] = (V, [list(f) for f in F]); continue
+        V2, F2 = fast_simplification.simplify(V.astype(np.float32), F, target_reduction=1 - frac)
+        out[n] = (V2.astype(float), [list(map(int, f)) for f in F2])
+    return out
 
 
 def export(parts, tag="LOD0"):

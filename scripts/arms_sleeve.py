@@ -19,6 +19,7 @@ def build(C):
     t = np.clip((xs - 0.725) / (x1 - 0.725), 0, 1); t = t * t * (3 - 2 * t)
     Rf = Rf * (1 - 0.22 * t)[:, None]
     Rf = B.smooth(Rf, around=2, along=1)
+    Rf[-1] *= 0.90; Rf[-2] *= 0.95
     P = B.rings_to_points(A, Rf, D)
     # row 0 = armhole ring exactly; blend rows 1..k0 from it into the first clean ring
     k1 = int(np.nonzero(xs >= 0.668)[0][0])
