@@ -9,6 +9,7 @@ from . import meshio, segment as S
 
 CX = 0.46425
 SWAP = {"left": "right", "right": "left"}
+MULTI = ("underskirt",)   # labels allowed to be several separate pieces
 
 
 def load_specs():
@@ -29,6 +30,9 @@ def load_specs():
 def grow(out):
     f = S.features(); spec = load_specs(); names = sorted(spec)
     seed = S.seeds_from(f, spec, names); lab = S.grow(f, seed); lab = S.smooth_labels(f, lab, 6)
+    keep = [i for i, n in enumerate(names) if n.startswith(MULTI)]
+    for _ in range(2): lab = S.absorb_islands(f, lab, keep=keep, names=names)
+    lab = S.smooth_labels(f, lab, 4)
     np.savez_compressed(out, lab=lab.astype(np.int16), names=np.array(names))
     print({n: int((lab == i).sum()) for i, n in enumerate(names)}, "unlabelled:", int((lab < 0).sum()))
 

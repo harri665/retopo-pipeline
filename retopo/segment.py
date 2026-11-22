@@ -137,3 +137,19 @@ def smooth_labels(feat, lab, iters=4):
         best = cnt.argmax(1); change = cnt[np.arange(len(b)), best] >= 2
         lab[b[change]] = best[change]
     return lab
+
+
+def absorb_islands(feat, lab, frac=0.25, keep=(), names=None, verbose=True):
+    """A label should be one connected piece. Pieces smaller than frac x its largest piece are stray
+    (a misplaced seed or a leak): hand them to whatever surrounds them. keep: label ids allowed to be multi-part."""
+    from scipy.sparse.csgraph import connected_components
+    I, J = feat["I"], feat["J"]; n = len(lab); m = lab[I] == lab[J]
+    _, comp = connected_components(coo_matrix((np.ones(m.sum()), (I[m], J[m])), shape=(n, n)), directed=False)
+    size = np.bincount(comp); cl = np.zeros(len(size), np.int64); cl[comp] = lab
+    big = np.zeros(int(lab.max()) + 1, np.int64); np.maximum.at(big, cl[cl >= 0], size[cl >= 0])
+    stray = (cl >= 0) & (size < frac * big[np.maximum(cl, 0)]) & ~np.isin(cl, list(keep))
+    if verbose and names is not None:
+        for l in np.unique(cl[stray]):
+            s = np.sort(size[stray & (cl == l)])[::-1]; print("  islands absorbed from %-20s %d pieces, biggest %d of %d" % (names[l], len(s), s[0], big[l]))
+    seed = lab.copy(); seed[stray[comp]] = -1
+    return grow(feat, seed)
