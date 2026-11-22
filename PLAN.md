@@ -1,7 +1,7 @@
 # Retopology plan: Infantry Ranged Trooper
 
 Scope: **topology only**. No UVs, bakes, textures or materials for now.
-Status: pass 1 and pass 2 done but pass 2 failed on likeness; see `REVIEW.md` and `PLAN_V3.md` (current plan).
+Status: pass 3 (source-driven rebuild) delivered: see `HIGHPOLY_V3.md`. Working notes: `PROGRESS.md`.
 
 ## Inputs
 

@@ -85,3 +85,6 @@ out; hip cord kept as its own object.
   Sent to user. Remaining polish: ragged borders at back hip bands / shield edges, small holes (red
   specks) in skirt, boot_shaft_r 1.6 mm, studs/buttons still fused to parents (to-do item 3), 1.65M quads
   is heavy (could raise --edge).
+- v3 DELIVERED: 87 objects, studs/buttons separate (`scripts/hp3_studs.py`, labels `studs__<parent>`),
+  per-piece remeshing in fromseg, skirt panels at --maxbase 70000. Whole model p95 0.22 mm, 0.49% > 5 mm.
+  Summary `HIGHPOLY_V3.md`. Remaining polish is listed there under "Known limits"; nothing is running.
