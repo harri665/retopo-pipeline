@@ -121,7 +121,7 @@ def seeds_from(feat, spec, names, sub=None):
     for n, pts in spec.items():
         for p in pts:
             try: seed[ray_seed(feat, p[0], p[1], p[2], p[3] if len(p) > 3 else 0.004, sub)] = names.index(n)
-            except ValueError as e: print("WARN", n, e)
+            except (ValueError, KeyError) as e: print("WARN", n, p, e)
     return seed
 
 
