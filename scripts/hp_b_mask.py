@@ -3,7 +3,7 @@ import numpy as np
 from retopo import build as B, hard, meshio
 from scripts.hp_b_common import *
 
-OFF_POS = [0.0, 0.002, 0.0045, 0.0070, 0.0085, 0.0125, 0.0165, 0.0205, 0.0245, 0.0285, 0.0325, HW]
+OFF_POS = [0.0, 0.002, 0.0045, 0.0070, 0.0085, 0.0125, 0.0170, 0.0205, 0.0245, 0.0280, 0.0336, HW]
 OFFS = np.array([-o for o in OFF_POS[:0:-1]] + OFF_POS)
 VR = np.array([0, .12, .22, .32, .42, .52, .62, .72, .82, .91, 1.0])
 NJ, NI = len(OFFS), len(VR)
@@ -15,7 +15,7 @@ def grid_points():
         yb = y_bot(o)
         for i, v in enumerate(VR):
             y = yb + v * (Y_TOP - yb)
-            P[i, j] = [CX + o, y, float(z_front(o, y))]
+            P[i, j] = [CX + float(x_actual(o, y)), y, float(z_front(o, y))]
     return P
 
 
@@ -88,24 +88,37 @@ def build_slit_bars():
     return B.merge(parts)
 
 
+def offset_polyline(pts, d):
+    """inset an open polyline (miter joins) by d towards the side the centroid is on."""
+    pts = np.asarray(pts, float); n = len(pts); out = []
+    cen = pts.mean(0)
+    def nrm(a, b):
+        t = (b - a) / np.linalg.norm(b - a); nn = np.array([-t[1], t[0]])
+        mid = 0.5 * (a + b)
+        return nn if (cen - mid) @ nn > 0 else -nn
+    for k in range(n):
+        if k == 0: out.append(pts[0] + nrm(pts[0], pts[1]) * d)
+        elif k == n - 1: out.append(pts[-1] + nrm(pts[-2], pts[-1]) * d)
+        else:
+            n1, n2 = nrm(pts[k - 1], pts[k]), nrm(pts[k], pts[k + 1]); m = n1 + n2; m /= np.linalg.norm(m)
+            out.append(pts[k] + m * d / max(m @ n1, 0.3))
+    return np.array(out)
+
+
 def outline_path():
-    """rim path (2D xy), inset from the plate border, rounded corners, top end -> V -> top end."""
-    d = 0.0024; yt = Y_TOP - 0.004
-    hw = HW - d
-    # inset V: lines parallel to the lower edges
-    s = (Y_CORNER - Y_TIP) / HW            # slope of the V edge
-    c = np.hypot(1, s)
-    ytip = Y_TIP + d * c
-    ycorner = ytip + s * hw
-    pts = np.array([[-hw, yt], [-hw, ycorner], [0, ytip], [hw, ycorner], [hw, yt]])
-    rc = 0.0035   # corner rounding distance (keeps the chin pointed)
+    """rim bead path (2D xy offsets), inset from the kite border, top end -> V -> top end, corners softly rounded."""
+    yt = Y_TOP - 0.004
+    base = np.array([[-x_actual(HW, yt), yt], [-HW_SH, Y_SHOULDER], [-0.0300, Y_TIP + 0.767 * 0.030], [0.0, Y_TIP],
+                     [0.0300, Y_TIP + 0.767 * 0.030], [HW_SH, Y_SHOULDER], [float(x_actual(HW, yt)), yt]])
+    base[:, 0] = np.where(np.arange(len(base)) < 3, -np.abs(base[:, 0]), np.abs(base[:, 0])); base[3, 0] = 0
+    pts = offset_polyline(base, 0.0024)
+    rc = [0, 0.004, 0.003, 0.0018, 0.003, 0.004, 0]
     out = [pts[0]]
     for k in range(1, len(pts) - 1):
         a, b, c2 = pts[k - 1], pts[k], pts[k + 1]
         ua = (a - b) / np.linalg.norm(a - b); uc = (c2 - b) / np.linalg.norm(c2 - b)
-        out += [b + ua * rc, b + 0.5 * (ua + uc) * rc * 0.55 if False else b + (ua + uc) * rc * 0.28, b + uc * rc]
+        out += [b + ua * rc[k], b + (ua + uc) * rc[k] * 0.28, b + uc * rc[k]]
     out.append(pts[-1]); pts = np.array(out)
-    # resample along arc length
     seg = np.r_[0, np.cumsum(np.linalg.norm(np.diff(pts, axis=0), axis=1))]
     n = int(seg[-1] / 0.0036); t = np.linspace(0, seg[-1], n + 1)
     return np.stack([np.interp(t, seg, pts[:, 0]), np.interp(t, seg, pts[:, 1])], 1)
@@ -113,11 +126,12 @@ def outline_path():
 
 def build_rim():
     p2 = outline_path()
-    path = np.array([[CX + x, y, float(z_front(x, y))] for x, y in p2])
+    nom = lambda x, y: np.sign(x) * np.where(abs(x) > CORE, CORE + (abs(x) - CORE) / kite_scale(y), abs(x))
+    path = np.array([[CX + x, y, float(z_front(nom(x, y), y))] for x, y in p2])
     nr = []
     for x, y in p2:
         e = 1e-4
-        dzdx = (z_front(x + e, y) - z_front(x - e, y)) / (2 * e); dzdy = (z_front(x, y + e) - z_front(x, y - e)) / (2 * e)
+        dzdx = (z_front(nom(x + e, y), y) - z_front(nom(x - e, y), y)) / (2 * e); dzdy = (z_front(nom(x, y + e), y + e) - z_front(nom(x, y - e), y - e)) / (2 * e)
         n = np.array([-dzdx, -dzdy, 1.0]); nr.append(n / np.linalg.norm(n))
     sec = hard.rect_section(0.0036, 0.0026, bevel=0.0007, lift=0.0, sink=0.0015)
     return hard.sweep(path, np.array(nr), sec, closed=False)

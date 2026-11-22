@@ -5,7 +5,9 @@ from scripts.hp_b_common import *
 from scripts import hp_b_mask as M
 
 ZA = 0.14
-HOOD_XH = 0.0345            # flat sides of the head wrap (just inside the mask edge)
+HOOD_XH = 0.0375            # ear base half width (just outside the skull surface)
+HOOD_A = 0.0365             # skull half width
+HOOD_BF = 0.080             # front semi-axis (the mask back limits it anyway)
 Y_TOP_HOOD = 0.912
 N_CAP = 12
 dx_, dy_ = hard.disc_grid(N_CAP)
@@ -16,7 +18,7 @@ NJ = len(THJ)
 DIRS = np.stack([np.sin(THJ), np.zeros(NJ), np.cos(THJ)], 1)
 AD = np.abs(np.degrees(THJ))
 
-_R_SS = lambda ad: np.interp(ad, [0, 80, 100, 120, 140, 160, 180], [9, 0.0375, 0.035, 0.033, 0.030, 0.028, 0.027])
+_R_SS = lambda ad: np.interp(ad, [0, 85, 100, 120, 140, 160, 180], [9, 0.0375, 0.0360, 0.0335, 0.0305, 0.0285, 0.0275])
 
 
 def mask_caster():
@@ -27,8 +29,9 @@ def mask_caster():
 def hood_R(MC, j, y):
     d = DIRS[j]; o = np.array([CX, y + 0.003, ZA])
     R = _R_SS(AD[j])
-    s = abs(d[0])
-    if s > 0.02: R = min(R, HOOD_XH / s)
+    s, c = abs(d[0]), d[2]
+    if c > 0: R = min(R, 1.0 / np.sqrt((s / HOOD_A) ** 2 + (c / HOOD_BF) ** 2))     # rounded skull: no flat box sides
+    elif s > 0.02: R = min(R, HOOD_A / s * 1.0)
     h = MC.first(o, d, 0.3)
     if h is not None:
         R = min(R, h[3] - 0.0012)
@@ -103,6 +106,28 @@ def build_neck(MC, ylo):
     return B.grid_mesh(np.array(P), wrap_u=True, flip=True)
 
 
+def conform_hood():
+    """take the sculpt's skull/wrap form on the sides and back; mask, ears, hat zone and bottom ledge stay as modelled."""
+    from retopo import hipoly
+    V, P = meshio.load_obj("hipoly/head_hood.obj")
+    V2, W = hipoly.project(V, P, dmax=0.0045, min_dot=0.6, relax=1)
+    ang = np.degrees(np.abs(np.arctan2(V[:, 0] - CX, V[:, 2] - ZA)))
+    wa = np.clip((ang - 74) / 12.0, 0, 1) * np.clip((150 - ang) / 15.0, 0, 1)
+    wy = np.clip((V[:, 1] - 0.862) / 0.010, 0, 1) * np.clip((0.908 - V[:, 1]) / 0.006, 0, 1)
+    we = np.ones(len(V))
+    for sg in (1, -1):
+        ec = np.array([CX + sg * HOOD_XH, 0.907, 0.152])
+        we = np.minimum(we, np.clip((np.linalg.norm(V - ec, axis=1) - 0.014) / 0.010, 0, 1))
+    w = wa * wy * we
+    Vf = V + (V2 - V) * w[:, None]
+    # even the quads out a little after pulling them onto the sculpt
+    A = hipoly.adjacency(len(Vf), P); N = hipoly.vertex_normals(Vf, P)
+    T = (A @ Vf) - Vf; T -= (T * N).sum(1, keepdims=True) * N
+    Vf = Vf + 0.25 * T * (w > 0)[:, None]
+    meshio.save_obj("hipoly/head_hood.obj", Vf, P)
+    print("hood conform: mean applied weight %.3f, mean shift %.5f" % (w.mean(), np.linalg.norm(Vf - V, axis=1).mean()))
+
+
 def conform_neck():
     """pull the scarf front onto the sculpt's chevron folds; the sides stay as modelled (collar wings own them)."""
     from retopo import hipoly
@@ -120,7 +145,7 @@ def conform_neck():
 def ear(sign=1):
     n_ = np.array([0.96, 0.05, -0.26]); n_ /= np.linalg.norm(n_)
     up = np.array([0.0, 0.98, -0.2])
-    c = np.array([CX + HOOD_XH - 0.0008, 0.907, 0.152])
+    c = np.array([CX + HOOD_XH - 0.0005, 0.907, 0.152])
     prof = lambda r: 0.0030 + 0.0045 * np.exp(-((r - 0.84) / 0.13) ** 2) + 0.0028 * np.exp(-((r - 0.48) / 0.13) ** 2) - 0.0026 * np.exp(-(r / 0.30) ** 2)
     rad = 0.0175; asp = 0.78; nn = 8
     V, Q, ring = hard.cap(c, n_, rad, prof, n=nn, skirt=[(1.0, 0.0018), (1.05, 0.0), (1.05, -0.0045)], up=up, aspect=asp)
@@ -145,7 +170,8 @@ if __name__ == "__main__":
     MC = mask_caster()
     (V, Q), ylo = build_hood(MC)
     V, Q = B.weld(V, Q, 1e-5)
-    print("hood", finish("head_hood", V, Q, crease_angle=40, crease=0.6))
+    print("hood", finish("head_hood", V, Q, crease_angle=50, crease=0.5))
+    conform_hood()
     V, Q = build_neck(MC, ylo)
     print("neck", finish("neck_wrap", V, Q, crease_angle=60, crease=0.5))
     conform_neck()

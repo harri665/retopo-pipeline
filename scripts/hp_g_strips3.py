@@ -50,7 +50,7 @@ def build_strip(a0, a1, ytip, tip, prof, slope, icpt, coat_r_fn, nrows=7, ncols=
         yb = max(yb - 0.002, 0.06)
         for i in range(nrows):
             y = TOPY + (yb - TOPY) * i / (nrows - 1)
-            rr = min(rc(y), coat_r_fn(ac, y) - 0.012)
+            rr = min(rc(y), coat_r_fn(ac, y) - 0.034)
             wpos = np.radians(a - ac) * rr
             P[i, j] = np.array([G.CX, y, G.CZ]) + rr * d + wpos * w
     return P

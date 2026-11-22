@@ -29,21 +29,25 @@ def sweep_cage(P, N, width, thick, bevel, lift=0.0, sink=0.0008, closed=False):
     return V, orient_outward(V, fix_winding(Q))
 
 
-def tilted_dirs(alpha, beta, thetas):
-    """Directions in a plane tilted by alpha (top leaning back) and yawed by beta (outer side rearward)."""
-    Sp = np.cos(beta) * S3 - np.sin(beta) * F3; Fp = np.cos(beta) * F3 + np.sin(beta) * S3
-    w = np.cos(alpha) * Y3 - np.sin(alpha) * Fp
-    return np.cos(thetas)[:, None] * w + np.sin(thetas)[:, None] * Sp
+PLANE_B, PLANE_C = -0.689, -0.786          # strap plane: u = a + B v + C y (fitted to three measured points on the sculpt's instep band)
 
 
-def instep_path(S, u0, alpha, beta, n=26, th=118):
-    A0 = W(u0, 0.003, 0.025)
+def instep_path(S, a, n=28, th=122):
+    """Strap ring = intersection of the foot with the plane u = a + B v + C y, cast from a point inside the foot."""
+    e_up = np.array([PLANE_C, 0.0, 1.0]); e_up /= np.linalg.norm(e_up)
+    e_sd = np.array([PLANE_B, 1.0, 0.0]); e_sd /= np.linalg.norm(e_sd)
+    v0, y0 = 0.003, 0.020
+    A0 = W(a + PLANE_B * v0 + PLANE_C * y0, v0, y0)
     th_r = np.deg2rad(np.linspace(-th, th, n))
-    P, N = strap_path(S, A0, tilted_dirs(np.deg2rad(alpha), np.deg2rad(beta), th_r), False)
-    keep = P[:, 1] > 0.0105
-    # keep the contiguous run above the sole
-    idx = np.where(keep)[0]; P, N = P[idx[0]:idx[-1] + 1], N[idx[0]:idx[-1] + 1]
-    return P, N, th_r[idx[0]:idx[-1] + 1]
+    D = np.array([toW(np.cos(t) * e_up + np.sin(t) * e_sd) - toW(np.zeros(3)) for t in th_r])
+    hits = [S.ray(A0, d, 0.15) for d in D]
+    mid = n // 2; lo = mid; hi = mid
+    while lo > 0 and hits[lo - 1] is not None and hits[lo - 1][0][1] > 0.0105: lo -= 1
+    while hi < n - 1 and hits[hi + 1] is not None and hits[hi + 1][0][1] > 0.0105: hi += 1
+    idx = list(range(lo, hi + 1))
+    P = np.array([hits[i][0] for i in idx]); N = np.array([hits[i][1] if hits[i][1] @ D[i] > 0 else -hits[i][1] for i in idx])
+    P = smooth_rows(P, 2, False); N = smooth_rows(N, 3, False); N /= np.linalg.norm(N, axis=1, keepdims=True)
+    return P, N, th_r[idx]
 
 
 def main():
@@ -55,7 +59,7 @@ def main():
     P, N = strap_path(S, A0, dirs, True, nsm=2)
     Vs, Qs = sweep_cage(P, N, 0.0150, 0.0030, 0.0009, closed=True)
     # tab on the outer side: theta 62..112 deg (0 = front, 90 = outer), a flat plate lying on the strap
-    sel = (np.rad2deg(th) >= 60) & (np.rad2deg(th) <= 118); ti = np.where(sel)[0]
+    sel = (np.rad2deg(th) >= 46) & (np.rad2deg(th) <= 106); ti = np.where(sel)[0]
     Pt, Nt = P[ti] + N[ti] * 0.0030, N[ti]
     Vt, Qt = sweep_cage(Pt, Nt, 0.0170, 0.0036, 0.0012, sink=0.0006)
     # rear roll: thick rounded roll over the strap on the back half, 120..250 deg
@@ -65,14 +69,14 @@ def main():
     V, Q = B.merge([(Vs, Qs), (Vt, Qt), (Vr, Qr)])
     out["ankle"] = save_object("boot_ankle_strap_l", V, Q, crease_angle=None, levels=2)
     # ankle buckle frame: front-outer, theta 38 deg on the strap
-    k = int(np.argmin(abs(np.rad2deg(th) - 36)))
+    k = int(np.argmin(abs(np.rad2deg(th) - 20)))
     tang = np.cross(Y3, N[k]); tang /= np.linalg.norm(tang)
     Vb1, Qb1 = buckle(P[k] + N[k] * 0.0030, N[k], Y3, 0.0140, 0.0190)
     # ---------------- instep strap + second strap (diagonal rings)
-    Pi, Ni, thi = instep_path(S, 0.0690, 33.0, 20.0)
+    Pi, Ni, thi = instep_path(S, 0.0949)
     Vi, Qi = sweep_cage(Pi + Ni * 0.0004, Ni, 0.0140, 0.0030, 0.0009, sink=0.0010)
     out["instep"] = save_object("boot_instep_strap_l", Vi, Qi, crease_angle=None, levels=2)
-    P2, N2, th2 = instep_path(S, 0.0820, 33.0, 20.0)
+    P2, N2, th2 = instep_path(S, 0.1034)
     V2, Q2 = sweep_cage(P2 + N2 * 0.0004, N2, 0.0105, 0.0026, 0.0008, sink=0.0010)
     out["second"] = save_object("boot_second_strap_l", V2, Q2, crease_angle=None, levels=2)
     # instep buckle on the outer side of the instep strap (theta ~ +70 deg): frame wraps across the strap

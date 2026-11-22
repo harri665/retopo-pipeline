@@ -12,7 +12,7 @@ def ytop(u):
     return 0.0115 + 0.0315 * np.sqrt(t)
 
 
-def main(nc=16, nr=5, phim=114):
+def main(nc=16, nr=5, phim=121):
     S = Surf(); C = caster()
     H = W(-0.010, 0.003, 0.0)
     phis = np.deg2rad(np.linspace(-phim, phim, nc + 1))
@@ -23,7 +23,7 @@ def main(nc=16, nr=5, phim=114):
             ex = [x for x in C.all(H + Y3 * y, d, 0.1) if not x[2]]
             return H + Y3 * y + d * max(x[0] for x in ex)
         u = toL(outer(0.02))[0]
-        yt = max(ytop(u), Y_B + 0.0075)
+        yt = max(ytop(u), Y_B + 0.0030)
         for k in range(nr + 1):
             y = Y_B + (yt - Y_B) * k / nr
             po0 = outer(y); h = S.ray_last(H + Y3 * y, d, 0.1)

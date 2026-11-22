@@ -35,7 +35,7 @@ def fit_half():
     # lean: blend base/top plan positions from the smoothed wall (keeps the stand-up cone shape, drops the folds)
     xzb = 0.5 * xzb + 0.5 * xz; xzt = 0.5 * xzt + 0.5 * xz
     # wing lower edge dips toward the lapel corner; top rim flares out a little (stand-up collar)
-    drop = np.zeros(J); drop[10:18] = [0.004, 0.010, 0.013, 0.012, 0.009, 0.006, 0.003, 0.0][:J - 10]
+    drop = np.zeros(J); drop[8:18] = [0.009, 0.019, 0.030, 0.028, 0.022, 0.016, 0.010, 0.007, 0.0035, 0.0]
     ybase = ybase - drop
     fl = np.zeros(J); fl[:14] = 0.004 * np.clip((13 - np.arange(14)) / 4.0, 0, 1)
     for k in range(J):
@@ -43,7 +43,7 @@ def fit_half():
         if nd > 1e-6 and fl[k] > 0: xzt[k] += d / nd * fl[k]
     # tip must keep a little height so the leaf is a real (quad) point, not a degenerate one
     gap = ytop - ybase
-    ytop[-1] += max(0, 0.005 - gap[-1]) / 2; ybase[-1] -= max(0, 0.005 - gap[-1]) / 2
+    ytop[-1] += max(0, 0.0012 - gap[-1]) / 2; ybase[-1] -= max(0, 0.0012 - gap[-1]) / 2
     xzt[0, 0] = CX; xzb[0, 0] = CX; xz[0, 0] = CX      # back centre exactly on the symmetry plane
     T = np.column_stack([xzt[:, 0], ytop, xzt[:, 1]]); Bt = np.column_stack([xzb[:, 0], ybase, xzb[:, 1]])
     return Bt, T
@@ -74,10 +74,35 @@ def outward_flip(P):
     return (n @ out) < 0
 
 
+def solidify_var(V, Q, t):
+    """B.solidify with a per-vertex thickness t (so tips and the buried base thin out to almost nothing)."""
+    n = np.zeros_like(V)
+    for q in Q:
+        fn = np.cross(V[q[1]] - V[q[0]], V[q[-1]] - V[q[0]]); fn /= np.linalg.norm(fn) + 1e-12
+        for a in q: n[a] += fn
+    n /= np.linalg.norm(n, axis=1, keepdims=True) + 1e-12
+    N = len(V); V2 = np.vstack([V, V - n * t[:, None]])
+    Q2 = [list(q) for q in Q] + [[a + N for a in q[::-1]] for q in Q]
+    he = set()
+    for q in Q:
+        for i in range(len(q)): he.add((q[i], q[(i + 1) % len(q)]))
+    for (a, b) in he:
+        if (b, a) not in he: Q2.append([b, a, a + N, b + N])
+    return V2, Q2
+
+
+def thickness_grid(NR, NC):
+    rowt = np.array([0.0005, 0.0030, 0.0050] + [THK] * (NR - 3))
+    c = np.arange(NC); dist_tip = np.minimum(c, NC - 1 - c)          # columns from the nearest wing tip
+    colt = np.clip(0.0012 + (THK - 0.0012) * dist_tip / 5.0, 0.0012, THK)
+    return np.minimum(rowt[:, None], colt[None, :] + 0.0) if False else rowt[:, None] * (colt[None, :] / THK)
+
+
 def build_collar():
     P = sheet(); flip = outward_flip(P)
     V, Q = B.grid_mesh(P, wrap_u=False, flip=flip)
-    V2, Q2 = B.solidify(V, Q, THK)
+    t = thickness_grid(*P.shape[:2]).reshape(-1)
+    V2, Q2 = solidify_var(V, Q, t)
     return V2, Q2, P, flip
 
 
@@ -92,10 +117,11 @@ def build_trim(P, flip):
         for a in q: nrm[a] += fn
     nrm /= np.linalg.norm(nrm, axis=1, keepdims=True)
     idx = lambda r, c: r * NC + c
-    W = 5                                 # wing columns that carry lower-edge piping on each side
+    W = 9                                 # wing columns that carry lower-edge piping on each side
     pts, nn = [], []
+    tt = lambda c, r: float(thickness_grid(NR, NC)[r, c] / THK)
     def add(r, c, up):
-        i = idx(r, c); p = V[i] - nrm[i] * THK * 0.5
+        i = idx(r, c); p = V[i] - nrm[i] * THK * 0.5 * (1.0 if c > 4 and c < NC - 5 and up else tt(c, r))
         pts.append(p); nn.append(nrm[i])
     for c in range(W, 0, -1): add(r0, c, 0)          # wing lower edge towards the tip (+x side)
     tip = 0.5 * (V[idx(r0, 0)] + V[idx(r1, 0)]) - nrm[idx(r1, 0)] * THK * 0.5

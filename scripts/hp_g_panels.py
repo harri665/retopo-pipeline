@@ -127,12 +127,13 @@ if __name__ == "__main__":
     def lift_over_trousers(V, margin=0.006):
         V = V.copy(); n = 0
         for k, q in enumerate(V):
-            if q[1] < 0.45: continue
+            if q[1] < 0.5: continue
             d = np.array([q[0] - G.CX, 0, q[2] - G.CZ]); r = np.linalg.norm(d); d /= r
             h = TC.first(np.array([G.CX, q[1], G.CZ]) + d * 0.5, -d, 0.5)
             if h is None: continue
             rt = 0.5 - h[3]
-            if r < rt + margin: V[k, 0] += d[0] * (rt + margin - r); V[k, 2] += d[2] * (rt + margin - r); n += 1
+            if r < rt + margin:
+                dl = min(rt + margin - r, 0.012); V[k, 0] += d[0] * dl; V[k, 2] += d[2] * dl; n += 1
         return V, n
 
     for k, (name, V, Q) in enumerate(parts):
