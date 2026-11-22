@@ -14,7 +14,7 @@ G = {
     'A': ([0.8925, 0.7385, 0.191], [0.927, 0.7305, 0.205]),
     'B': ([0.8895, 0.7205, 0.189], [0.9275, 0.710, 0.201]),
     'C': ([0.885, 0.7065, 0.188], [0.921, 0.697, 0.197]),
-    'D': ([0.876, 0.690, 0.185], [0.903, 0.684, 0.191]),
+    'D': ([0.876, 0.6935, 0.186], [0.903, 0.684, 0.191]),
     'T': ([0.862, 0.744, 0.190], [0.889, 0.762, 0.222]),
 }
 FSTA = np.array([0, 0.10, 0.22, 0.31, 0.40, 0.58, 0.67, 0.76, 0.88, 1.0])
@@ -124,9 +124,9 @@ def build(C):
     F = {}
     for ii, k in enumerate(names):
         gaps = [np.linalg.norm(bp[ii][1:] - bp[ii + d][1:]) for d in (-1, 1) if 0 <= ii + d < 4]
-        nb = min(gaps) / 2 - 0.0012 if gaps else 0.009
-        up = (gaps[0] / 2 - 0.0012) if ii > 0 else 0.0085     # toward A (+y)
-        dn = (gaps[-1] / 2 - 0.0012) if ii < 3 else 0.0085
+        nb = min(gaps) / 2 - 0.0007 if gaps else 0.009
+        up = (gaps[0] / 2 - 0.0007) if ii > 0 else 0.0085     # toward A (+y)
+        dn = (gaps[-1] / 2 - 0.0007) if ii < 3 else 0.0085
         # j=0 is +y side, j=4 is -y side
         oth_pts = np.vstack([B.resample_polyline(sk[q], n=40) for q in G if q != k])
         ax, R, D, T = finger(C, sk[k], FSTA, (min(up, 0.0095), min(dn, 0.0095), min(nb, 0.0095)), oth_pts)
