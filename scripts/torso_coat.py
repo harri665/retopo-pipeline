@@ -130,6 +130,17 @@ def build():
                 nb = [q for q in nb if present[q]]
                 Q[i, j] = 0.4 * P[i, j] + 0.6 * np.mean([P[q] for q in nb], 0)
         P = Q
+    # extra smoothing of the front shoulder/chest (rows 7..16, front columns), keeping pins, bottom rows and neck
+    pin = np.zeros((NROW, N), bool)
+    for (r, c) in blk: pin[r, c % N] = True; pin[r, (N // 2 - c) % N] = True
+    for it in range(25):
+        Q = P.copy()
+        for i in range(7, NECK_K):
+            for j in range(22, 47):
+                if pin[i, j]: continue
+                nb = [P[i - 1, j], P[i + 1, j], P[i, j - 1], P[i, (j + 1) % N]]
+                Q[i, j] = 0.5 * P[i, j] + 0.5 * np.mean(nb, 0)
+        P = Q
     V = P.reshape(-1, 3).copy()
     idx = lambda i, j: i * N + (j % N)
     quads = []
