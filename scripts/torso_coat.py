@@ -52,7 +52,7 @@ def build():
     # rows 2..5: fill gaps, remove buttons with a grey opening (keeps wide lapel steps)
     Rl = B.fill_nan(R[2:CAST_ALL_K + 1].copy())
     Rp = np.concatenate([Rl[:, -6:], Rl, Rl[:, :6]], 1)
-    Ro = grey_opening(Rp, size=(3, 5), mode="nearest")[:, 6:-6]
+    Ro = grey_opening(Rp, size=(1, 5), mode="nearest")[:, 6:-6]
     R[2:CAST_ALL_K + 1] = np.minimum(Rl, Ro); valid[2:CAST_ALL_K + 1] = True
     for k in range(CAST_ALL_K + 1, 14):
         for j in range(N):

@@ -28,3 +28,7 @@ print(H.astype(int)[::-1])
 print("z split",np.histogram(X[idx,2],bins=[0,0.1,0.13,0.165,0.2,0.3])[0])
 for lim in (0.07,0.06):
     mm=(X[:,1]>0.65)&(X[:,1]<0.80)&(dx<lim); rep(f"vis dx<{lim}",mm); rep(" front",mm&(X[:,2]>0.165)); rep(" back",mm&(X[:,2]<0.165))
+mb=(X[:,1]>0.65)&(X[:,1]<0.80)&(dx<0.06)&(X[:,2]<0.165)
+H,_,_=np.histogram2d(X[mb,1],np.round((X[mb,0]-B.CX)*100),bins=[np.arange(0.65,0.81,0.02),np.arange(-6,7,2)],weights=d[mb]*1000)
+C0,_,_=np.histogram2d(X[mb,1],np.round((X[mb,0]-B.CX)*100),bins=[np.arange(0.65,0.81,0.02),np.arange(-6,7,2)])
+print("back mean err mm by y (rows top=0.79) x dx cm (-6..6 step 2)"); print(np.round(H/np.maximum(C0,1),1)[::-1])
