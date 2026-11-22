@@ -1,6 +1,6 @@
 import numpy as np
 from retopo import meshio
-V,P=meshio.load_obj("hp_cages/coat_inner_liner_front_l.obj")
+V,P=meshio.load_obj("hp_cages/skirt_back_panel.obj")
 L=[]
 for p in P:
     for i in range(4):
