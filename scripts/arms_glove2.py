@@ -14,7 +14,7 @@ G = {
     'A': ([0.8925, 0.7385, 0.191], [0.927, 0.7305, 0.205]),
     'B': ([0.8895, 0.7205, 0.189], [0.9275, 0.710, 0.201]),
     'C': ([0.885, 0.7065, 0.188], [0.921, 0.697, 0.197]),
-    'D': ([0.876, 0.6935, 0.186], [0.903, 0.684, 0.191]),
+    'D': ([0.876, 0.690, 0.185], [0.903, 0.684, 0.191]),
     'T': ([0.862, 0.744, 0.190], [0.889, 0.762, 0.222]),
 }
 FSTA = np.array([0, 0.10, 0.22, 0.31, 0.40, 0.58, 0.67, 0.76, 0.88, 1.0])
@@ -58,15 +58,32 @@ def frames_side(ax):
     return T, D
 
 
-def finger(C, A, nsta, spacing_cap, base_fix_x=None):
+def finger(C, A, nsta, spacing_cap, others=None):
     ax = B.resample_polyline(A, at=nsta)
     T, D = frames_side(ax)
-    R = rings(C, ax, D, 0.0098)
+    own = cKDTree(B.resample_polyline(A, n=60))
+    oth = cKDTree(others) if others is not None and len(others) else None
+    S = len(ax); R = np.full((S, NS), np.nan)
+    for i in range(S):
+        for j in range(NS):
+            d = D[i, j]; o = ax[i] + d * 0.016
+            for (t, f, enter) in C.all(o, -d, 0.02):
+                if not enter: continue
+                pnt = o - d * t
+                dn = own.query(pnt)[0]
+                if dn < 0.0135 and (oth is None or dn <= oth.query(pnt)[0]):
+                    R[i, j] = 0.016 - t; break
+    for j in range(NS):                      # miss -> opposite side
+        m = np.isnan(R[:, j]); R[m, j] = R[m, (j + 4) % NS]
+    R = np.minimum(R, 0.0125)
+    R = B.fill_nan(R)
     R = B.smooth(R, around=1, along=1)
-    # sides (+y / -y) must not overlap neighbouring fingers
-    for j in (0, 4): R[:, j] = np.minimum(R[:, j], spacing_cap[j // 4])
-    for j in (1, 3, 5, 7): R[:, j] = np.minimum(R[:, j], spacing_cap[2])
-    R[-2] *= 0.9; R[-1] *= 0.68
+    rel = np.clip((np.arange(S) - 1) / 3.0, 0, 1); rel = rel * rel * (3 - 2 * rel)      # caps only matter at the base
+    for j in (0, 4):
+        cp = spacing_cap[j // 4] + (0.0125 - spacing_cap[j // 4]) * rel; R[:, j] = np.minimum(R[:, j], cp)
+    for j in (1, 3, 5, 7):
+        cp = spacing_cap[2] + (0.0125 - spacing_cap[2]) * rel; R[:, j] = np.minimum(R[:, j], cp)
+    R[-2] = R[-3] * 0.85; R[-1] = R[-3] * 0.55          # round tip
     return ax, R, D, T
 
 
@@ -99,7 +116,7 @@ def orient(V, polys, C):
 def build(C):
     H = hand_points()
     names = 'ABCD'
-    sk = {k: skel(H, *G[k], tipback=RTIP if k != 'T' else 0.0045) for k in G}
+    sk = {k: skel(H, *G[k], tipback=0.0042 if k != 'T' else 0.0042) for k in G}
     cy = {k: sk[k][0, 1] for k in names}
     ys = [cy[k] for k in names]
     bp = [sk[k][0] for k in names]
@@ -111,7 +128,8 @@ def build(C):
         up = (gaps[0] / 2 - 0.0012) if ii > 0 else 0.0085     # toward A (+y)
         dn = (gaps[-1] / 2 - 0.0012) if ii < 3 else 0.0085
         # j=0 is +y side, j=4 is -y side
-        ax, R, D, T = finger(C, sk[k], FSTA, (min(up, 0.0085), min(dn, 0.0085), min(nb, 0.0085)))
+        oth_pts = np.vstack([B.resample_polyline(sk[q], n=40) for q in G if q != k])
+        ax, R, D, T = finger(C, sk[k], FSTA, (min(up, 0.0095), min(dn, 0.0095), min(nb, 0.0095)), oth_pts)
         F[k] = (ax, R, D, T)
     # ---------------- palm end ring (26 verts) from the finger ring 0 loops
     ring0 = {k: F[k][0][0][None, :] + F[k][1][0][:, None] * F[k][2][0] for k in names}
@@ -177,11 +195,32 @@ def build(C):
                 if Q_[i, j, 0] > 0.856 and tk.query(Q_[i, j])[0] > 0.0095:
                     q = C.nearest(Q_[i, j])[0]; Q_[i, j] = 0.3 * Q_[i, j] + 0.7 * q
         Pp = Q_
-    # wrist tuck: limit radius about the axis for the cuff rows
+    for it in range(3):
+        Q_ = Pp.copy()
+        for i in range(1, PR - 1):
+            for j in range(NP):
+                Q_[i, j] = 0.5 * Pp[i, j] + 0.125 * (Pp[i - 1, j] + Pp[i + 1, j] + Pp[i, (j - 1) % NP] + Pp[i, (j + 1) % NP])
+                if Q_[i, j, 0] > 0.856:
+                    q = C.nearest(Q_[i, j])[0]; Q_[i, j] = 0.5 * Q_[i, j] + 0.5 * q
+        Pp = Q_
+    # wrist tuck: stay >= 0.003 inside the bracer's inner wall (read from parts/bracer_l.obj)
+    bv, _ = meshio.load_obj("parts/bracer_l.obj"); bin_ = bv[len(bv) // 2:]
+    wr = []
+    for xr in (0.830, 0.840, 0.848):
+        m = np.abs(bin_[:, 0] - xr) < 0.0015
+        pts_ = bin_[m]; c_ = cen_x(xr); ang = np.arctan2(pts_[:, 2] - c_[2], pts_[:, 1] - c_[1])
+        rr = np.hypot(pts_[:, 2] - c_[2], pts_[:, 1] - c_[1]); o_ = np.argsort(ang)
+        wr.append((xr, ang[o_], rr[o_]))
+    def wlim(x, a_):
+        vals = []
+        for xr, ang, rr in wr: vals.append(np.interp(a_, np.r_[ang - 2 * np.pi, ang, ang + 2 * np.pi], np.tile(rr, 3)))
+        return np.interp(x, [w[0] for w in wr], vals) - 0.0035
     for i in range(PR - 1):
         for j in range(NP):
-            x = Pp[i, j, 0]; lim = np.interp(x, [0.838, 0.848, 0.860], [0.0158, 0.0162, 0.07])
-            c = cen_x(x); dvv = Pp[i, j] - c; n = np.linalg.norm(dvv[1:])
+            x = Pp[i, j, 0]
+            c = cen_x(x); dvv = Pp[i, j] - c; n = np.linalg.norm(dvv[1:]); a_ = np.arctan2(dvv[2], dvv[1])
+            wl = wlim(min(x, 0.848), a_)
+            lim = wl if x <= 0.848 else wl + (x - 0.848) / 0.010 * 0.035
             if n > lim: Pp[i, j, 1:] = c[1:] + dvv[1:] * lim / n
     verts = list(Pp.reshape(-1, 3)); Q = []
     # ---------------- thumb
@@ -189,7 +228,7 @@ def build(C):
     dist = np.array([palm_tree.query(p)[0] for p in Th])
     istart = int(np.nonzero((dist > 0.0085) & (np.arange(len(Th)) >= 6))[0][0])
     Ahat = Th[istart:]
-    axT, TR, TD, TT = finger(C, Ahat, TSTA, (0.0085, 0.0085, 0.0085))
+    axT, TR, TD, TT = finger(C, Ahat, TSTA, (0.011, 0.011, 0.011), np.vstack([B.resample_polyline(sk[q], n=40) for q in names]))
     TR = np.maximum(TR, 0.0)
     Pt = axT[:, None, :] + TR[:, :, None] * TD
     c0 = Pt[0].mean(0)
@@ -209,7 +248,7 @@ def build(C):
                 a, b = base + i * NS + j, base + i * NS + (j + 1) % NS; Q.append([a, b, b + NS, a + NS])
         return base
     def tip_cap(base, S, axe, tdir, r):
-        last = base + (S - 1) * NS; cv = len(verts); verts.append(axe + tdir * 0.7 * r)
+        last = base + (S - 1) * NS; cv = len(verts); verts.append(axe + tdir * 0.9 * r)
         for j in range(0, NS, 2): Q.append([last + j, last + (j + 1) % NS, last + (j + 2) % NS, cv])
     tb = add_tube(Pt); tip_cap(tb, len(Pt), axT[-1], TT[-1], TR[-1].mean())
     hv = np.array([verts[i] for i in hid]); best = None
@@ -217,7 +256,14 @@ def build(C):
         for sh in range(NS):
             idx = [(sh + sgn * m) % NS for m in range(NS)]; cost = ((Pt[0][idx] - hv) ** 2).sum()
             if best is None or cost < best[0]: best = (cost, idx)
-    for m in range(NS): Q.append([hid[m], hid[(m + 1) % NS], tb + best[1][(m + 1) % NS], tb + best[1][m]])
+    idxm = best[1]; t0r = Pt[0][idxm]; cm = 0.5 * (hv.mean(0) + t0r.mean(0))
+    dirT = Pt[1].mean(0) - Pt[0].mean(0); dirT /= np.linalg.norm(dirT)
+    Mr = 0.5 * (hv + t0r); Mr = cm + (Mr - cm) * 1.12 + dirT * 0.0025
+    mb = len(verts); verts.extend(Mr)
+    for m in range(NS):
+        m2 = (m + 1) % NS
+        Q.append([hid[m], hid[m2], mb + m2, mb + m])
+        Q.append([mb + m, mb + m2, tb + idxm[m2], tb + idxm[m]])
     # ---------------- finger tubes: ring 0 uses the palm end ring vertices
     fbase = {}
     base_n = PR - 1
