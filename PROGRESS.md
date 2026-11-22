@@ -69,3 +69,13 @@ out; hip cord kept as its own object.
   legs barely captured, label fragmented; its build takes ~30 min at edge 3.5 (too dense/slow: after
   fixing labels use --edge 5). Fix needs skirt seeds. Also remove chest.json sleeve_l seed
   ["bottom", 0.6, 0.16] (lands on the left boot sole).
+- skirt DONE by builder (7 objects PASS but panels moth-eaten: holes from stray seeds in legs.json /
+  waist.json, side/back border arbitrary). ALL FIVE BUILDERS FINISHED; no agents running.
+- Lead changes since: `seeds grow` now auto-absorbs stray label islands (`segment.absorb_islands`);
+  `fromseg.build` extends each object by a sunk margin (margin_rings=4, sink_mm=1) so seams overlap in a
+  groove instead of cracking (verified on lapel/coat); `scripts/hp3_build_all.py [names]` builds all
+  labels 4 at a time with per-name edge sizes -> `docs/hp3_report.json`.
+- Upper body (32 objects) rebuilt from global labels and looks like the source (`out/hp3_upper.png`);
+  needs one more rebuild with margins. armhole_roll_r failed (3.7 mm): check its label.
+- NEXT: review merged lower-body labels (`seeds view`), fix trousers / hip shields / coat_lower / skirt
+  holes with seeds, then `python -m scripts.hp3_build_all` (everything), then to-do items 3-5.

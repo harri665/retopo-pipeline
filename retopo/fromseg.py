@@ -84,23 +84,43 @@ def _dist(P, V, F):
     bvh = BVHTree.FromPolygons(V.tolist(), F.tolist()); return np.array([bvh.find_nearest(Vector(p))[3] for p in P]) * MM
 
 
-def likeness(V, polys, TV, TF, n=40000, seed=0):
+def likeness(V, polys, TV, TF, UV=None, UF=None, n=40000, seed=0):
     """Two-way point-to-surface distances in mm: seg->obj (shape we lost) and obj->seg (shape we invented).
     Call before the border skirt is added."""
     rng = np.random.default_rng(seed); T = meshio.triangulate(polys)[0]
-    d1 = _dist(_samp(TV, TF, n, rng), V, T); d2 = _dist(_samp(V, T, n, rng), TV, TF)
+    d1 = _dist(_samp(TV, TF, n, rng), V, T); d2 = _dist(_samp(V, T, n, rng), TV if UV is None else UV, TF if UF is None else UF)
     return {"seg_to_obj_p95": round(float(np.percentile(d1, 95)), 2), "seg_to_obj_p99": round(float(np.percentile(d1, 99)), 2), "seg_to_obj_max": round(float(d1.max()), 2),
             "obj_to_seg_p95": round(float(np.percentile(d2, 95)), 2), "obj_to_seg_max": round(float(d2.max()), 2)}
 
 
-def build(name, mask, edge_mm=4.0, levels=1, cover=None, skirt_mm=3.0, sharp=False, border_smooth=8, out_dir="hipoly3", min_faces=200, max_base=15000):
-    """mask: source faces of this object. cover: source faces of things sitting on it, flattened and remeshed as part of it."""
-    full = mask if cover is None else (mask | cover)
-    V, F, vid = extract(full); V, F = keep_big(V, F, min_faces)
+def dilate(mask, rings):
+    """Grow a face mask by `rings` layers of neighbouring faces. Returns grown mask and per-face ring index (0 = original)."""
+    from . import segment
+    f = segment.features(); I, J = f["I"], f["J"]; ring = np.where(mask, 0, -1)
+    for k in range(1, rings + 1):
+        a = (ring[I] >= 0) & (ring[J] < 0); b = (ring[J] >= 0) & (ring[I] < 0); new = np.unique(np.concatenate([J[a], I[b]])); ring[new] = k
+    return ring >= 0, ring
+
+
+def build(name, mask, edge_mm=4.0, levels=1, cover=None, skirt_mm=2.0, sharp=False, border_smooth=8, out_dir="hipoly3", min_faces=200, max_base=15000,
+          margin_rings=4, sink_mm=1.0):
+    """mask: source faces of this object. cover: source faces of things sitting on it, flattened and remeshed as part of it.
+    margin: the object is extended a few faces past its border and that margin is sunk below the surface, so
+    neighbouring objects overlap in a shallow groove instead of leaving a crack."""
+    core = mask if cover is None else (mask | cover)
+    full, ring = dilate(core, margin_rings) if margin_rings else (core, np.where(core, 0, -1))
+    V, F, vid = extract(full)
+    if margin_rings:
+        SV, SF = meshio.load_source(); fr = ring[full]; vr = np.full(len(V), 99); np.minimum.at(vr, F.ravel(), np.repeat(fr, 3))
+        N = np.zeros_like(V); fn = np.cross(V[F[:, 1]] - V[F[:, 0]], V[F[:, 2]] - V[F[:, 0]])
+        for k in range(3): np.add.at(N, F[:, k], fn)
+        N /= np.linalg.norm(N, axis=1)[:, None] + 1e-20; V = V - N * (vr / margin_rings * sink_mm / MM)[:, None]
+    V0, F0 = V, F
+    V, F = keep_big(V, F, min_faces)
     TV, TF = V, F
     if cover is not None:
         SV, SF = meshio.load_source(); cmask = cover[np.flatnonzero(full)]
-        V0, F0, _ = extract(full); V0 = relax_under(V0, F0, cmask); TV, TF = keep_big(V0, F0, min_faces)
+        V0 = relax_under(V0, F0, cmask); TV, TF = keep_big(V0, F0, min_faces)
     area = 0.5 * np.linalg.norm(np.cross(TV[TF[:, 1]] - TV[TF[:, 0]], TV[TF[:, 2]] - TV[TF[:, 0]]), axis=1).sum()
     target = min(max_base, max(60, int(area / (edge_mm / MM) ** 2)))
     import fast_simplification
@@ -121,7 +141,7 @@ def build(name, mask, edge_mm=4.0, levels=1, cover=None, skirt_mm=3.0, sharp=Fal
                 if len(k) >= 2: Qn[i] = 0.5 * Q[i] + 0.5 * Q[k].mean(0)
             Q = Qn
         Q = project_to(Q, P, TV, TF, iters=2, smooth=0.3)
-    rep = likeness(Q, P, TV, TF); rep.update(name=name, quads=len(P), base_quads=len(cage[1]), area_cm2=round(float(area) * MM * MM / 100, 1))
+    CV, CF, _ = extract(mask); UV, UF, _ = extract(full); rep = likeness(Q, P, CV, CF, UV, UF); rep.update(name=name, quads=len(P), base_quads=len(cage[1]), area_cm2=round(float(area) * MM * MM / 100, 1))
     if skirt_mm: Q, P = skirt(Q, P, skirt_mm / MM)
     os.makedirs(os.path.join(meshio.ROOT, out_dir), exist_ok=True); os.makedirs(os.path.join(meshio.ROOT, "hp3_cages"), exist_ok=True)
     meshio.save_obj(os.path.join(meshio.ROOT, out_dir, name + ".obj"), Q, P); meshio.save_obj(os.path.join(meshio.ROOT, "hp3_cages", name + ".obj"), *cage)
@@ -143,5 +163,5 @@ if __name__ == "__main__":
     import sys, json
     a = sys.argv; opt = lambda k, d: a[a.index(k) + 1] if k in a else d
     r = build_named(a[1], labels=opt("--labels", None), edge_mm=float(opt("--edge", 3.0)), levels=int(opt("--levels", 1)), sharp="--sharp" in a,
-                    skirt_mm=float(opt("--skirt", 3.0)), cover_names=[c for c in opt("--cover", "").split(",") if c])
+                    skirt_mm=float(opt("--skirt", 2.0)), cover_names=[c for c in opt("--cover", "").split(",") if c])
     print(json.dumps(r)); os.makedirs(os.path.join(meshio.ROOT, "out", "hp3"), exist_ok=True); json.dump(r, open(os.path.join(meshio.ROOT, "out", "hp3", a[1] + ".json"), "w"))
