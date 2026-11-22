@@ -163,5 +163,5 @@ if __name__ == "__main__":
     import sys, json
     a = sys.argv; opt = lambda k, d: a[a.index(k) + 1] if k in a else d
     r = build_named(a[1], labels=opt("--labels", None), edge_mm=float(opt("--edge", 3.0)), levels=int(opt("--levels", 1)), sharp="--sharp" in a,
-                    skirt_mm=float(opt("--skirt", 2.0)), cover_names=[c for c in opt("--cover", "").split(",") if c])
+                    skirt_mm=float(opt("--skirt", 2.0)), max_base=int(opt("--maxbase", 15000)), cover_names=[c for c in opt("--cover", "").split(",") if c])
     print(json.dumps(r)); os.makedirs(os.path.join(meshio.ROOT, "out", "hp3"), exist_ok=True); json.dump(r, open(os.path.join(meshio.ROOT, "out", "hp3", a[1] + ".json"), "w"))

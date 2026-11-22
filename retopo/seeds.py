@@ -9,7 +9,9 @@ from . import meshio, segment as S
 
 CX = 0.46425
 SWAP = {"left": "right", "right": "left"}
-MULTI = ("underskirt",)   # labels allowed to be several separate pieces
+MULTI = ("underskirt",)
+# the sculpt has no seam between the skirt's side wings and its back: one object
+ALIAS = {"skirt_side_l": "skirt_back", "skirt_side_r": "skirt_back"}   # labels allowed to be several separate pieces
 
 
 def load_specs():
@@ -24,7 +26,9 @@ def load_specs():
                 if base in ("front", "back", "top", "bottom"): m = (v, 2 * CX - q[1]) + tuple(q[2:])
                 else: m = (SWAP[base] + rest,) + tuple(q[1:])
                 spec.setdefault(n[:-2] + "_r", []).append(m)
-    return spec
+    out = {}
+    for n, pts in spec.items(): out.setdefault(ALIAS.get(n, n), []).extend(pts)
+    return out
 
 
 def grow(out):

@@ -12,7 +12,7 @@ RULES = [  # first match wins: (regex, edge_mm, sharp)
 def run(n):
     e, sharp = next((e, s) for r, e, s in RULES if re.search(r, n))
     for edge in (e, e * 0.8, e * 1.25):   # QuadriFlow sometimes fails at one density: retry at another
-        cmd = [sys.executable, "-m", "retopo.fromseg", n, "--edge", str(edge)] + (["--sharp"] if sharp else [])
+        cmd = [sys.executable, "-m", "retopo.fromseg", n, "--edge", str(edge), "--maxbase", "30000" if n.startswith(("skirt_", "trousers", "underskirt")) else "15000"] + (["--sharp"] if sharp else [])
         p = subprocess.run(cmd, capture_output=True, text=True, cwd=meshio.ROOT)
         try: return json.loads(p.stdout.strip().splitlines()[-1])
         except Exception: err = (p.stderr or p.stdout)[-300:]
