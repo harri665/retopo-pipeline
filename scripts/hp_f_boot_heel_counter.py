@@ -13,24 +13,37 @@ def ytop(u):
 
 
 def main(nc=16, nr=5, phim=114):
-    S = Surf()
+    S = Surf(); C = caster()
     H = W(-0.010, 0.003, 0.0)
-    phis = np.deg2rad(np.linspace(-phim, phim, nc + 1)); P = np.zeros((nc + 1, nr + 1, 3))
+    phis = np.deg2rad(np.linspace(-phim, phim, nc + 1))
+    Po = np.zeros((nc + 1, nr + 1, 3)); Pi = np.zeros_like(Po)
     for j, ph in enumerate(phis):
         d = np.cos(ph) * (-F3) + np.sin(ph) * S3
-        h0 = S.ray_last(H + Y3 * 0.02, d, 0.1)
-        u = toL(h0[0])[0]
+        def outer(y):
+            ex = [x for x in C.all(H + Y3 * y, d, 0.1) if not x[2]]
+            return H + Y3 * y + d * max(x[0] for x in ex)
+        u = toL(outer(0.02))[0]
         yt = max(ytop(u), Y_B + 0.0075)
         for k in range(nr + 1):
             y = Y_B + (yt - Y_B) * k / nr
-            h = S.ray_last(H + Y3 * y, d, 0.1)
-            if h is None: print('miss', j, k, y, np.rad2deg(ph)); h = S.ray_last(H + Y3 * (y + 0.004), d, 0.1)
-            n = h[1] if h[1] @ d > 0 else -h[1]
-            P[j, k] = h[0] + n * OFF
-    # smooth along the arc
-    for _ in range(2): P[1:-1] = 0.25 * P[:-2] + 0.5 * P[1:-1] + 0.25 * P[2:]
-    V, Q = grid_pts_quads(P)
-    V, Q = B.solidify(V, fix_winding(Q), THICK)
+            po0 = outer(y); h = S.ray_last(H + Y3 * y, d, 0.1)
+            do0 = np.linalg.norm(po0 - (H + Y3 * y))
+            di = np.linalg.norm(h[0] - (H + Y3 * y)) if h is not None else do0 - 0.004
+            do = max(do0, di + 0.0024)                    # outer face: the sculpt's heel wall, but never inside the upper
+            po = H + Y3 * y + d * do; di = di - 0.0004
+            Po[j, k] = po; Pi[j, k] = H + Y3 * y + d * di
+    for _ in range(2): Po[1:-1] = 0.25 * Po[:-2] + 0.5 * Po[1:-1] + 0.25 * Po[2:]
+    nu, nv = nc, nr
+    V = np.vstack([Po.reshape(-1, 3), Pi.reshape(-1, 3)]); N0 = (nc + 1) * (nr + 1)
+    Q = grid_quads(nu, nv, 0) + [q[::-1] for q in grid_quads(nu, nv, N0)]
+    idx = lambda i, j, off: off + i * (nv + 1) + j
+    for i in range(nu):                                   # rim along the bottom (k=0) and top (k=nr)
+        for k in (0, nv):
+            a, b = idx(i, k, 0), idx(i + 1, k, 0); Q.append([a, b, b + N0, a + N0])
+    for j in range(nv):                                   # rim at the two ends
+        for i in (0, nu):
+            a, b = idx(i, j, 0), idx(i, j + 1, 0); Q.append([a, b, b + N0, a + N0])
+    Q = fix_winding(Q)
     n = save_object("boot_heel_counter_l", V, Q, crease_angle=35, levels=2)
     print("heel counter", n)
 

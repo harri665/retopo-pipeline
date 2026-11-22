@@ -87,18 +87,6 @@ def base_rings(rows, strap_sink=0.0015):
     Rb = Rm.copy(); Rb[0:9] = opening(0, 9, 2); Rb[15:] = opening(15, nR, 1)
     Rb = B.smooth(Rb, around=2, along=1)
     P = np.array([r[0][None, :] + Rb[i][:, None] * r[1] for i, r in enumerate(rows)])
-    # heel: slide the back/low vertices straight back (-F) onto the vertical heel wall of the sculpt so the heel is square
-    C = caster()
-    for i, r in enumerate(rows):
-        if r[3] != "bend": continue
-        for j in range(NS):
-            Lp = toL(P[i, j])
-            if Lp[0] < 0.02 and Lp[2] < 0.052:
-                if Lp[2] < 0.0085: P[i, j, 1] += (0.0085 - Lp[2])
-                ex = [x for x in C.all(P[i, j], -F3, 0.07) if not x[2]]
-                if ex:
-                    q = P[i, j] - F3 * (max(x[0] for x in ex) - 0.0012)
-                    if inbox(q) and toL(q)[0] < Lp[0] + 0.001: P[i, j] = q
     # lowest part sinks into the sole: points under the sole top pull in 3 mm and clamp to y>=0.007
     for i, r in enumerate(rows):
         if r[3] == "shaft": continue

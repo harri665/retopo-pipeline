@@ -3,7 +3,7 @@ python -m scripts.hp_e_slice 0.64 obj1 obj2 ..."""
 import sys, numpy as np
 from PIL import Image, ImageDraw
 from scripts.hp_e_common import *
-S = 5000; W = 900
+S = 4200; W = 900
 y0 = float(sys.argv[1]); names = sys.argv[2:]
 im = Image.new("RGB", (W, W), "white"); d = ImageDraw.Draw(im)
 def px(x, z): return ((x - CX) * S + W / 2, (-(z - ZC)) * S + W / 2)

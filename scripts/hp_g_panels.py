@@ -69,18 +69,24 @@ BK_HEM_L = [(102.0, 0.211), (105.6, 0.209), (107.0, 0.170), (110.3, 0.200), (110
 PLEATS = [107.0, 111.6, 120.5, 131.6, 135.5, 157.0, 160.8, 167.0, 179.0, 192.8, 200.0, 203.5, 219.8, 226.0, 239.6, 248.2]
 
 
-def back(nr=21, relief_gain=3.5):
+def back(nr=18, relief_gain=3.5):
     el = np.array(BK_EDGE_L); elf = lambda y: np.interp(y, el[:, 0], el[:, 1])
-    keys = sorted(set([102.0 + 3.2] + PLEATS))
-    # fill gaps larger than 7.5 deg
+    hv = np.array(BK_HEM_L)
+    corners = [hv[i, 0] for i in range(1, len(hv) - 1) if abs(hv[i, 1] - hv[i - 1, 1]) > 0.012 or abs(hv[i + 1, 1] - hv[i, 1]) > 0.012]
+    keys = sorted(set([round(k, 2) for k in corners + PLEATS if 105.0 <= k <= 255.0]))
+    merged = []
+    for k in keys:                     # drop columns closer than 0.7 deg to a kept one, tips (PLEATS) win
+        if merged and k - merged[-1] < 0.7:
+            if k in PLEATS: merged[-1] = k
+            continue
+        merged.append(k)
     allk = []
-    for a, b in zip([None] + keys[:-1], keys):
+    for a, b in zip([None] + merged[:-1], merged):
         if a is not None:
-            n = int(np.ceil((b - a) / 7.5))
+            n = int(np.ceil((b - a) / 9.0))
             for k in range(1, n): allk.append(a + (b - a) * k / n)
         allk.append(b)
-    allk.append(257.7 - 3.2) if False else None
-    allk = sorted(set(allk + [360 - 105.2]))
+    allk = sorted(set(allk + [360 - 105.2, 105.2]))
     inner = [k for k in allk if 105.2 <= k <= 254.8]
     cols = [lambda y: elf(y)] + [(lambda y, a=a: a) for a in inner] + [lambda y: 360 - elf(y)]
     hem = BK_HEM_L
@@ -116,5 +122,20 @@ if __name__ == "__main__":
         P, az = back(); V, Q = solid_and_write("bk", P); print("BK outward", G.outward_ok(V, Q), "cols", len(az)); parts.append(("skirt_back_panel", V, Q))
     for name, V, Q in list(parts):
         if name.endswith("_l") and "front_panel" not in name: parts.append((name[:-2] + "_r",) + B.mirror_x(V, Q))
+    TC = B.Caster(*(lambda VP: (VP[0], meshio.triangulate(VP[1])[0]))(meshio.load_obj("hipoly/trousers.obj")))
+
+    def lift_over_trousers(V, margin=0.006):
+        V = V.copy(); n = 0
+        for k, q in enumerate(V):
+            if q[1] < 0.45: continue
+            d = np.array([q[0] - G.CX, 0, q[2] - G.CZ]); r = np.linalg.norm(d); d /= r
+            h = TC.first(np.array([G.CX, q[1], G.CZ]) + d * 0.5, -d, 0.5)
+            if h is None: continue
+            rt = 0.5 - h[3]
+            if r < rt + margin: V[k, 0] += d[0] * (rt + margin - r); V[k, 2] += d[2] * (rt + margin - r); n += 1
+        return V, n
+
+    for k, (name, V, Q) in enumerate(parts):
+        V, n = lift_over_trousers(V); parts[k] = (name, V, Q); print(name, "lifted over trousers:", n)
     for name, V, Q in parts:
         V2, Q2 = thicken(V, Q); r = G.finish(name, V2, Q2); print(name, r)

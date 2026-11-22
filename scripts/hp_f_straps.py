@@ -56,8 +56,8 @@ def main():
     Vs, Qs = sweep_cage(P, N, 0.0150, 0.0030, 0.0009, closed=True)
     # tab on the outer side: theta 62..112 deg (0 = front, 90 = outer), a flat plate lying on the strap
     sel = (np.rad2deg(th) >= 60) & (np.rad2deg(th) <= 118); ti = np.where(sel)[0]
-    Pt, Nt = P[ti] + N[ti] * 0.0026, N[ti]
-    Vt, Qt = sweep_cage(Pt, Nt, 0.0168, 0.0030, 0.0010, sink=0.0006)
+    Pt, Nt = P[ti] + N[ti] * 0.0030, N[ti]
+    Vt, Qt = sweep_cage(Pt, Nt, 0.0170, 0.0036, 0.0012, sink=0.0006)
     # rear roll: thick rounded roll over the strap on the back half, 120..250 deg
     sel = (np.rad2deg(th) >= 130) & (np.rad2deg(th) <= 250); ri = np.where(sel)[0]
     Pr, Nr = P[ri] + N[ri] * 0.0018, N[ri]
