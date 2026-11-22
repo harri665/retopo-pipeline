@@ -64,3 +64,8 @@ out; hip cord kept as its own object.
   (skirt seeds placed just outside the outline stole it; right shield sits ~0.045 further back in z);
   coat_lower solid only in the upper front, breaks into strips lower down; shield/skirt border is a
   weak crease -> needs dense seeds on both sides.
+- legs DONE (15 objects PASS). Boots good: boot_shaft/tab/band1/band2/toe/foot/sole _l/_r.
+  trousers WRONG: contains skirt/underskirt panels (x 0.33-0.37 and 0.52-0.58 from y 0.2 up), upper
+  legs barely captured, label fragmented; its build takes ~30 min at edge 3.5 (too dense/slow: after
+  fixing labels use --edge 5). Fix needs skirt seeds. Also remove chest.json sleeve_l seed
+  ["bottom", 0.6, 0.16] (lands on the left boot sole).
