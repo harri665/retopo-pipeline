@@ -337,23 +337,6 @@
 0.735
 ]
 ],
-"shoulder_flap_l": [
-[
-"front",
-0.62,
-0.79
-],
-[
-"top",
-0.62,
-0.16
-],
-[
-"back",
-0.64,
-0.78
-]
-],
 "coat_upper": [
 [
 "front",
@@ -382,6 +365,23 @@
 0.778,
 0.14
 ]
+],
+"shoulder_cap_l": [
+[
+"front",
+0.62,
+0.79
+],
+[
+"top",
+0.62,
+0.16
+],
+[
+"back",
+0.64,
+0.78
+]
 ]
 },
 "mirror": [
@@ -391,7 +391,7 @@
 "bracer_tube_l",
 "wrist_strap_l",
 "glove_l",
-"shoulder_flap_l",
+"shoulder_cap_l",
 "bracer_ring_strap_l"
 ]
 }
