@@ -1,60 +1,104 @@
-"""Collar: thin double-layer stand-up sheet around the back/sides of the neck (outer layer, rolled top edge, inner layer)."""
+"""Collar: thin double-layer stand-up sheet. Back/side part from radial casts, front wing leaves from tangential casts.
+One half (x>cx) is cast, the other half is its mirror. Outer layer is cast, inner layer is offset along the surface normal."""
 import numpy as np
 from retopo import build as B, meshio
 
 CXH, CZH = 0.4645, 0.14
-PH = np.array([0, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104], float)
-PHI = np.concatenate([-PH[:0:-1], PH])  # -118..118 (from back)
-THD = 180 + PHI
-TH = np.radians(THD)
-D = np.stack([np.sin(TH), np.zeros(len(TH)), np.cos(TH)], 1)
-AP = np.abs(PHI)
-N = len(PHI)
-THK = 0.008
+PH = np.arange(0, 97, 8, float)                  # radial columns, degrees from the back
+WS = np.array([0.05, 0.062, 0.074, 0.086, 0.100])  # wing columns: distance along the leaf
+THW = np.radians(57)
+DIRW = np.array([np.sin(THW), 0, np.cos(THW)])
+TW = np.array([np.cos(THW), 0, -np.sin(THW)])
+THK = 0.009
 U = [0, .15, .3, .45, .6, .75, .88, 1.0]
 
 
-def ytop(ap):
-    return np.interp(ap, [0, 30, 60, 75, 90, 105], [.917, .912, .907, .900, .893, .884])
+def ytop_r(ap):
+    return np.interp(ap, [0, 30, 60, 75, 90, 105], [.917, .912, .907, .900, .893, .886])
 
 
-def ybase(ap):
-    return np.interp(ap, [0, 30, 45, 60, 75, 90, 105], [.800, .805, .82, .835, .85, .85, .85])
+def ybase_r(ap):
+    return np.interp(ap, [0, 30, 45, 60, 75, 90, 105], [.800, .805, .82, .835, .84, .84, .84])
 
 
-def cap(ap):
+def cap_r(ap):
     return np.interp(ap, [0, 60, 75, 90, 104], [.085, .085, .075, .068, .066])
 
 
-def build(C):
-    yt = ytop(AP); yb = ybase(AP); cp = cap(AP)
+def ytop_w(s):
+    return np.interp(s, [.05, .075, .10], [.882, .877, .868])
+
+
+def ybase_w(s):
+    return np.interp(s, [.05, .075, .10], [.80, .82, .855])
+
+
+def half(C):
+    J = len(PH) + len(WS)
     K = len(U)
-    Ro = np.full((K, N), np.nan); Yo = np.zeros((K, N))
-    for k, u in enumerate(U):
-        y = yb + (yt - yb) * u
-        if k == K - 1: y = yt - 0.002
-        Yo[k] = y
-        for j in range(N):
-            hs = C.all([CXH, y[j], CZH], D[j], 0.2)
-            rr = [h[0] for h in hs if h[0] <= cp[j]]
-            if rr: Ro[k, j] = max(rr)
-    Ro = B.fill_nan(Ro, wrap=False)
-    Ro = B.smooth(Ro, around=0, along=1)
+    ys = np.zeros((K, J)); pts = np.full((K, J, 3), np.nan)
+    # radial part
+    for j, ph in enumerate(PH):
+        th = np.radians(180 - ph); d = np.array([np.sin(th), 0, np.cos(th)])
+        yt, yb, cp = ytop_r(ph), ybase_r(ph), cap_r(ph)
+        for k, u in enumerate(U):
+            y = yb + (yt - yb) * u
+            if k == K - 1: y = yt - 0.002
+            ys[k, j] = y
+            hs = C.all([CXH, y, CZH], d, 0.2)
+            rr = [h[0] for h in hs if h[0] <= cp]
+            if rr: pts[k, j] = np.array([CXH, y, CZH]) + d * (max(rr) + 0.002)
+    # wing columns
+    for i, s in enumerate(WS):
+        j = len(PH) + i
+        yt, yb = ytop_w(s), ybase_w(s)
+        for k, u in enumerate(U):
+            y = yb + (yt - yb) * u
+            if k == K - 1: y = yt - 0.002
+            ys[k, j] = y
+            q = np.array([CXH, y, CZH]) + DIRW * s
+            hs = C.all(q - TW * 0.05, TW, 0.1)
+            tt = [h[0] - 0.05 for h in hs if -0.012 <= h[0] - 0.05 <= 0.022]
+            if tt: pts[k, j] = q + TW * (max(tt) + 0.002)
+    # fill NaN: first along the column (rows), then along rows
+    for j in range(J):
+        for c in range(3):
+            v = pts[:, j, c]; ok = ~np.isnan(v)
+            if ok.any() and not ok.all(): pts[:, j, c] = np.interp(np.arange(K), np.arange(K)[ok], v[ok])
+    for k in range(K):
+        for c in range(3):
+            v = pts[k, :, c]; ok = ~np.isnan(v)
+            if ok.any() and not ok.all(): pts[k, :, c] = np.interp(np.arange(J), np.arange(J)[ok], v[ok])
+    # smooth across columns lightly, rows lightly (keep ends)
     for _ in range(1):
-        Ro[:, 1:-1] = 0.25 * Ro[:, :-2] + 0.5 * Ro[:, 1:-1] + 0.25 * Ro[:, 2:]
-    Ro2 = Ro.copy()
+        Q = pts.copy(); Q[:, 1:-1] = 0.25 * pts[:, :-2] + 0.5 * pts[:, 1:-1] + 0.25 * pts[:, 2:]; pts = Q
     for _ in range(1):
-        Q = Ro2.copy(); Q[:, 1:-1] = 0.25 * Ro2[:, :-2] + 0.5 * Ro2[:, 1:-1] + 0.25 * Ro2[:, 2:]; Ro2 = Q
-    Ro = Ro2 + 0.002
-    Yb = Yo.copy(); Yb[0] = Yb[0] - 0.01   # base runs into the coat
-    Po = np.stack([CXH + Ro * D[:, 0], Yb, CZH + Ro * D[:, 2]], 2)   # (K,N,3)
+        Q = pts.copy(); Q[1:-1] = 0.25 * pts[:-2] + 0.5 * pts[1:-1] + 0.25 * pts[2:]; pts = Q
+    pts[0, :, 1] = ys[0] - 0.01      # base runs into the coat
+    return pts
+
+
+def build(C):
+    h = half(C)            # (K, J, 3), column 0 = back centre, last = wing tip
+    m = h.copy(); m[:, :, 0] = 2 * CXH - m[:, :, 0]
+    Po = np.concatenate([h[:, ::-1], m[:, 1:]], axis=1)   # tip(x>cx) ... back ... tip(x<cx)
+    K, N, _ = Po.shape
     dr = np.gradient(Po, axis=0); dc = np.gradient(Po, axis=1)
     n = np.cross(dc, dr); n /= np.linalg.norm(n, axis=2, keepdims=True) + 1e-12
-    if (n[K // 2, N // 2] @ D[N // 2]) < 0: n = -n
+    mid = N // 2
+    ax = np.array([CXH, 0, CZH])
+    if (n[K // 2, mid] @ (Po[K // 2, mid] - ax)) < 0: n = -n
     Pi = Po - THK * n
     rows = [Po[k] for k in range(K)] + [Pi[k] for k in range(K - 1, -1, -1)]
     P = np.stack(rows, 0)
-    return B.grid_mesh(P, wrap_u=False, flip=False)
+    V, Q = B.grid_mesh(P, wrap_u=False, flip=False)
+    R = P.shape[0]
+    idx = lambda r, c: r * N + c
+    for c, flip in ((0, True), (N - 1, False)):   # close both wing tips with a strip of quads
+        for k in range(K - 1):
+            a, b = idx(k, c), idx(k + 1, c); d_, e = idx(2 * K - 1 - k, c), idx(2 * K - 2 - k, c)
+            Q.append([a, d_, e, b] if not flip else [a, b, e, d_])
+    return V, Q
 
 
 if __name__ == "__main__":
