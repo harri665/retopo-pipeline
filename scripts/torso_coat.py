@@ -1,20 +1,21 @@
-"""coat_upper: torso tube (cast), invented shoulders, two armholes ending exactly on manifest.armhole_ring."""
+"""coat_upper v2: uniform torso grid (48 cols x 18 rows), cast from the vertical axis, V-notch at the front,
+two armholes funnelled (2 quad rings) onto manifest.armhole_ring."""
 import numpy as np
-from scipy.ndimage import median_filter
+from scipy.ndimage import grey_opening
 from retopo import build as B, meshio, manifest as M
 
 CX = B.CX
-ZC = 0.165                      # torso axis z
-N = 48                          # columns; col j at angle 7.5*j deg, 0=+x(left), 90=back(-z)
-Y_BELT_TOP = 0.655
-
-CAST_Y = [0.66, 0.6725, 0.685, 0.6975]
-LOW_Y = [0.635, 0.6475]                    # hidden under the belt (copy of the 0.66 radii)
-HOLE_Y = [0.725, 0.758, 0.792, 0.825]      # nominal rows of the 6x4 hole block
-TOP_Y = [0.842, 0.855]                     # shoulder-top row and neck opening ring
-NECK_C = np.array([CX, 0.855, 0.135]); NECK_RX, NECK_RZ = 0.062, 0.056
-J0 = -1                                    # left hole block columns J0..J0+5
-HOLE_COLS, HOLE_ROWS = 6, 4                # vertices
+ZC = 0.165
+N = 48
+Y0, DY = 0.635, 0.0125
+NROW = 18                                   # k=0..17, y=0.635..0.8475
+NECK_K = 17
+NECK_C = np.array([CX, Y0 + DY * NECK_K, 0.135]); NECK_RX, NECK_RZ = 0.062, 0.056
+CAST_ALL_K = 5                              # rows 0..5 (y<=0.6975) cast on every column
+J0 = 0                                      # left hole block columns J0..J0+4
+BLK_ROWS = (9, 13)                          # hole block rows (bottom, top)
+FRONT = 36                                  # front centre column (theta=270deg)
+KEDGE = lambda d: 5 + 2 * d                 # V notch: column FRONT+-d present up to this row (d<=4)
 
 
 def dirs():
@@ -22,123 +23,132 @@ def dirs():
     return np.stack([np.cos(th), np.zeros(N), -np.sin(th)], 1), th
 
 
-def cast_rows(C):
-    ax = np.array([[CX, y, ZC] for y in CAST_Y])
-    R, D, _ = B.ring_cast(C, ax, N, 0.14, up=(1, 0, 0))
-    R = B.fill_nan(R)
-    # remove buttons / studs: clamp to a median-filtered radius
-    Rp = np.concatenate([R[:, -4:], R, R[:, :4]], 1)
-    Rm = median_filter(Rp, size=(3, 7), mode="nearest")[:, 4:-4]
-    R = np.minimum(R, Rm + 0.0008)
-    R = B.smooth(R, around=2, along=1)
-    return R, D
+def yk(k): return Y0 + DY * k
+
+
+def cast_radii(C, Dn):
+    """Cast every row on every column; invalid hits are NaN."""
+    R = np.full((NROW - 1, N), np.nan)
+    for k in range(NROW - 1):
+        o = np.array([CX, yk(k), ZC])
+        for j in range(N):
+            if k < 2:                       # under the belt: use row 2 (after the loop)
+                continue
+            h = C.first(o + Dn[j] * 0.14, -Dn[j], 0.14)
+            if h: R[k, j] = 0.14 - h[3]
+    return R
 
 
 def build():
     C = B.Caster()
     Dn, th = dirs()
-    Rc, _ = cast_rows(C)
-    rows_y = LOW_Y + CAST_Y + HOLE_Y + TOP_Y
-    nrow = len(rows_y)
-    P = np.zeros((nrow, N, 3))
-    # lower + cast rows
-    for i, y in enumerate(LOW_Y):
-        P[i] = np.array([CX, y, ZC]) + Rc[0][:, None] * Dn
-    for k, y in enumerate(CAST_Y):
-        P[len(LOW_Y) + k] = np.array([CX, y, ZC]) + Rc[k][:, None] * Dn
-    chest = P[len(LOW_Y) + len(CAST_Y) - 1].copy()
+    Rraw = cast_radii(C, Dn)
+    # --- accept cast radii: rows<=5 everywhere; rows 6..13 only on the back/front columns, continuity-checked
+    valid = np.zeros((NROW, N), bool)
+    R = np.full((NROW, N), np.nan)
+    side = set()
+    for c in range(-4, 7): side.add(c % N); side.add((N // 2 - c) % N)
+    for k in range(2, NROW - 1):
+        for j in range(N):
+            if np.isnan(Rraw[k, j]): continue
+            if k > CAST_ALL_K:
+                if j in side or k > 13: continue
+                if k > 9 and (FRONT - 6 <= j <= FRONT + 6) is False and False: continue
+            valid[k, j] = True; R[k, j] = Rraw[k, j]
+    # fill rows 0..5 gaps along the ring then remove buttons by grey opening (keeps wide lapel steps)
+    Rl = R[2:CAST_ALL_K + 1].copy()
+    Rl = B.fill_nan(Rl)
+    Rp = np.concatenate([Rl[:, -6:], Rl, Rl[:, :6]], 1)
+    Ro = grey_opening(Rp, size=(3, 5), mode="nearest")[:, 6:-6]
+    R[2:CAST_ALL_K + 1] = np.minimum(Rl, Ro)
+    # upper cast rows: reject outliers vs the row below (buttons) with the same opening on the valid band
+    for k in range(CAST_ALL_K + 1, 14):
+        for j in range(N):
+            if valid[k, j]:
+                below = R[k - 1, j]
+                if np.isnan(below) or abs(R[k, j] - below) > 0.03 or R[k, j] < 0.04: valid[k, j] = False; R[k, j] = np.nan
+    # under-belt rows copy row 2
+    R[0] = R[2]; R[1] = R[2]; valid[0] = valid[1] = True
+    for k in range(0, 2): R[k] = R[2]
+
+    P = np.zeros((NROW, N, 3))
+    fixed = np.zeros((NROW, N), bool)
+    for k in range(NROW - 1):
+        for j in range(N):
+            if valid[k, j]:
+                P[k, j] = np.array([CX, yk(k), ZC]) + R[k, j] * Dn[j]; fixed[k, j] = True
+    # initial guess for the rest: previous row (same column) pulled toward the neck ring above row 13
     neck = NECK_C + np.stack([NECK_RX * np.cos(th), np.zeros(N), -NECK_RZ * np.sin(th)], 1)
-    r_first = len(LOW_Y) + len(CAST_Y)
-    for i in range(r_first, nrow):
-        y = rows_y[i]
-        tt = np.clip((y - 0.795) / (0.855 - 0.795), 0, 1); s = tt * tt * (3 - 2 * tt)
-        p = chest * (1 - s) + neck * s; p[:, 1] = y
-        P[i] = p
-    P[-1] = neck
-    fixed = np.zeros((nrow, N), bool); fixed[:r_first] = True; fixed[-1] = True
-    present = np.ones((nrow, N), bool)
-    rb = r_first                      # hole block rows rb..rb+3
-    pins = {}
-    blk = []                          # (row, col) perimeter order p=0.. starting top-left going +j
-    top, bot = rb + HOLE_ROWS - 1, rb
-    cols = list(range(J0, J0 + HOLE_COLS))
-    for c in cols: blk.append((top, c))
-    for r in range(top - 1, bot, -1): blk.append((r, cols[-1]))
-    for c in reversed(cols): blk.append((bot, c))
-    for r in range(bot + 1, top): blk.append((r, cols[0]))
+    P[NECK_K] = neck; fixed[NECK_K] = True
+    base = P[CAST_ALL_K].copy()
+    for k in range(CAST_ALL_K + 1, NECK_K):
+        if not fixed[k].all():
+            t = (k - CAST_ALL_K) / (NECK_K - CAST_ALL_K); s = np.clip((t - 0.45) / 0.55, 0, 1); s = s * s * (3 - 2 * s)
+            for j in range(N):
+                if not fixed[k, j]:
+                    p = base[j] * (1 - s) + neck[j] * s; p[1] = yk(k); P[k, j] = p
+    # --- presence mask: V notch + hole interior
+    present = np.ones((NROW, N), bool)
+    for d in range(0, 5):
+        for j in (FRONT - d, FRONT + d):
+            present[KEDGE(d) + 1:, j] = False
+    # hole block
+    rb, rt = BLK_ROWS
+    cols = list(range(J0, J0 + 5))
+    blk = []
+    for c in cols: blk.append((rt, c))
+    for r in range(rt - 1, rb, -1): blk.append((r, cols[-1]))
+    for c in reversed(cols): blk.append((rb, c))
+    for r in range(rb + 1, rt): blk.append((r, cols[0]))
     assert len(blk) == 16
     ringL = M.armhole_ring("l"); cen = np.array([0.59, 0.775, 0.135])
+    XW = 0.552
 
-    def loop_pos(k, f, dx):
-        q = ringL[k].copy(); q[1:] = cen[1:] + (q[1:] - cen[1:]) * f; q[0] += dx; return q
-    kmap = [(p + 14) % 16 for p in range(16)]
+    def loop_pos(k, f, x):
+        q = ringL[k].copy(); q[1:] = cen[1:] + (q[1:] - cen[1:]) * f; q[0] = x; return q
+    kmap = [(p - 2) % 16 for p in range(16)]
     for p, (r, c) in enumerate(blk):
-        P[r, c % N] = loop_pos(kmap[p], 1.12, -0.04)
-        fixed[r, c % N] = True
-        # mirrored (right) hole: column 24-c
+        P[r, c % N] = loop_pos(kmap[p], 0.5, XW); fixed[r, c % N] = True
         q = P[r, c % N].copy(); q[0] = 2 * CX - q[0]
         P[r, (N // 2 - c) % N] = q; fixed[r, (N // 2 - c) % N] = True
-    for r in range(bot + 1, top):
+    for r in range(rb + 1, rt):
         for c in cols[1:-1]:
             present[r, c % N] = False; present[r, (N // 2 - c) % N] = False
-    # anchors: real surface at back/front columns of the shoulder rows (outside hole neighbourhood)
-    ax = np.array([[CX, y, ZC] for y in HOLE_Y])
-    Ra, _, _ = B.ring_cast(C, ax, N, 0.14, up=(1, 0, 0))
-    ymax = np.array([0.76, 0.76, 0.80, 0.80])
-    A = np.full((nrow, N, 3), np.nan)
-    skip = set()
-    for c in range(J0 - 3, J0 + 9): skip.add(c % N); skip.add((N // 2 - c) % N)
-    for k, y in enumerate(HOLE_Y):
-        for j in range(N):
-            r = Ra[k, j]
-            if j in skip or np.isnan(r) or not (0.045 < r < 0.115) or y > ymax[k] + 1e-9: continue
-            if abs(r - np.linalg.norm((chest[j] - np.array([CX, chest[j][1], ZC])))) > 0.025: continue
-            A[r_first + k, j] = np.array([CX, y, ZC]) + r * Dn[j]
     # relax free vertices
-    for it in range(120):
+    for it in range(150):
         Q = P.copy()
-        for i in range(1, nrow - 1):
+        for i in range(1, NROW - 1):
             for j in range(N):
                 if fixed[i, j] or not present[i, j]: continue
                 nb = [(i - 1, j), (i + 1, j), (i, (j - 1) % N), (i, (j + 1) % N)]
                 nb = [q for q in nb if present[q]]
-                Q[i, j] = 0.5 * P[i, j] + 0.5 * np.mean([P[q] for q in nb], 0)
-                if not np.isnan(A[i, j, 0]): Q[i, j] = 0.45 * A[i, j] + 0.55 * Q[i, j]
+                Q[i, j] = 0.4 * P[i, j] + 0.6 * np.mean([P[q] for q in nb], 0)
         P = Q
-    # quads
-    quads = []
     V = P.reshape(-1, 3).copy()
     idx = lambda i, j: i * N + (j % N)
-    for i in range(nrow - 1):
+    quads = []
+    for i in range(NROW - 1):
         for j in range(N):
             c4 = [(i, j), (i, j + 1), (i + 1, j + 1), (i + 1, j)]
             if all(present[a, b % N] for a, b in c4):
                 quads.append([idx(i, j), idx(i, j + 1), idx(i + 1, j + 1), idx(i + 1, j)])
-    # bridges (2 rings) to armhole rings; mid ring shared by construction
-    for side in ("l", "r"):
-        ring = M.armhole_ring(side)
-        sgn = 1 if side == "l" else -1
-        loopidx = []
-        for p, (r, c) in enumerate(blk):
-            jj = c % N if side == "l" else (N // 2 - c) % N
-            loopidx.append(idx(r, jj))
-        he = set()
-        for q in quads:
-            for a in range(4): he.add((q[a], q[(a + 1) % 4]))
-        base = len(V); mid = []; end = []
-        V = np.vstack([V] + [loop_pos(kmap[p], 1.05, -0.02)[None] * np.array([[1, 1, 1]]) for p in range(16)])
-        mid = list(range(base, base + 16))
-        if side == "r":
-            V[mid, 0] = 2 * CX - V[mid, 0]
-        base2 = len(V)
-        V = np.vstack([V, ring]); end = list(range(base2, base2 + 16))
-        # ring k <-> loop p with k=(p+14)%16 ; end index by p
-        endp = [end[kmap[p]] for p in range(16)]
+    he = set()
+    for q in quads:
+        for a in range(4): he.add((q[a], q[(a + 1) % 4]))
+    for side_ in ("l", "r"):
+        ring = M.armhole_ring(side_)
+        loopidx = [idx(r, c % N if side_ == "l" else (N // 2 - c) % N) for (r, c) in blk]
+        base_i = len(V)
+        mid = np.array([loop_pos(kmap[p], 0.75, 0.571) for p in range(16)])
+        if side_ == "r": mid[:, 0] = 2 * CX - mid[:, 0]
+        V = np.vstack([V, mid]); midi = list(range(base_i, base_i + 16))
+        b2 = len(V); V = np.vstack([V, ring]); endi = list(range(b2, b2 + 16))
+        endp = [endi[kmap[p]] for p in range(16)]
         for p in range(16):
             a, b = loopidx[p], loopidx[(p + 1) % 16]
-            ma, mb = mid[p], mid[(p + 1) % 16]; ea, eb = endp[p], endp[(p + 1) % 16]
-            if (a, b) in he: quads.append([b, a, ma, mb]); quads.append([mb, ma, ea, eb])
-            else: quads.append([a, b, mb, ma]); quads.append([ma, mb, eb, ea])
+            ma, mb = midi[p], midi[(p + 1) % 16]; ea, eb = endp[p], endp[(p + 1) % 16]
+            if (a, b) in he: quads += [[b, a, ma, mb], [mb, ma, ea, eb]]
+            else: quads += [[a, b, mb, ma], [ma, mb, eb, ea]]
     return V, quads
 
 

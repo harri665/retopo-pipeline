@@ -25,10 +25,11 @@ def stations():
     S = []
     for y in [0.174, 0.170, 0.152, 0.134, 0.116, 0.100, 0.093, 0.086]:
         S.append((pt(0, y), -Y3, "shaft", y))
-    yb = YF + RHO
-    for k in range(5):                                    # fan around the ankle bend
-        ph = np.deg2rad(90 * k / 4)
-        S.append((pt(RHO - RHO * np.cos(ph), yb - RHO * np.sin(ph)), np.sin(ph) * F3 - np.cos(ph) * Y3, "bend", ph))
+    E0 = np.array([0.0, YF + RHO]); C0 = np.array([0.0, YF]); E1 = np.array([RHO, YF])
+    for t in np.linspace(0, 1, 7):                        # quadratic bezier round the ankle: the mid ring's outer ray hits the heel corner
+        p = (1 - t) ** 2 * E0 + 2 * t * (1 - t) * C0 + t * t * E1
+        d = 2 * (1 - t) * (C0 - E0) + 2 * t * (E1 - C0); d /= np.linalg.norm(d)
+        S.append((pt(p[0], p[1]), d[0] * F3 + d[1] * Y3, "bend", np.arctan2(d[0], -d[1])))
     for u in [0.072, 0.083, 0.094, 0.103, 0.110]:
         S.append((pt(u, YF), F3, "foot", u))
     return S
@@ -41,13 +42,19 @@ def frame(T, ph):
 
 def main():
     C = B.Caster(); SV, _ = meshio.load_proxy()
-    st = stations(); th = np.arange(NS) * 2 * np.pi / NS
+    st = stations(); th_u = np.arange(NS) * 2 * np.pi / NS
+    # foot rings: denser ring angles around the sole-welt corners (100-140 deg and the mirror 220-260) so the sole edge is a hard loop
+    A = np.linspace(100, 140, 6); Bz = 360 - A[::-1]; bot = np.linspace(140, 220, 5)[1:-1]
+    top = np.linspace(260, 460, NS - 12 - 3 + 2)[1:-1]
+    th_f = np.deg2rad(np.sort(np.concatenate([A, Bz, bot, top]) % 360)); assert len(th_f) == NS
     rows = []; hold = None
     for A, T, kind, par in st:
         if kind == "shaft": ph = 0.0
         elif kind == "bend": ph = par
         else: ph = np.pi / 2
         U, W = frame(T, ph)
+        bl = 0.0 if kind == "shaft" else (1.0 if kind == "foot" else min(1.0, ph / (np.pi / 2)))
+        th = (1 - bl) * th_u + bl * th_f
         D = np.cos(th)[:, None] * U + np.sin(th)[:, None] * W
         hidden = kind == "shaft" and par > 0.105
         if hidden:
