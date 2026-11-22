@@ -104,3 +104,31 @@ def build(name, levels=2, dmax=0.005, exclude=None, crease_angle=None, crease=1.
 if __name__ == "__main__":
     n = os.path.splitext(os.path.basename(sys.argv[1]))[0]
     print(n, build(n, int(sys.argv[2]) if len(sys.argv) > 2 else 2, float(sys.argv[3]) if len(sys.argv) > 3 else 0.005))
+
+
+def tuck_under(V, polys, covers, clearance=0.0012, reach=0.03, back=0.012, raise_gap=True, iters=40):
+    """Seat a soft object under the hard objects that lie on it. For every vertex, look along its normal for the
+    cover's surface: if the cloth pokes through (cover is behind) it is pushed back under; if raise_gap and the cover
+    floats above within `reach`, the cloth is raised to meet it. Offsets are blended smoothly into the uncovered area.
+    covers: list of (V, polys). Returns new V and the number of vertices moved."""
+    import bpy  # noqa
+    from mathutils import Vector
+    from mathutils.bvhtree import BVHTree
+    CV, CP = [], []; off = 0
+    for cv, cp in covers:
+        CV.append(cv); CP += [[int(i) + off for i in p] for p in cp]; off += len(cv)
+    CV = np.vstack(CV); bvh = BVHTree.FromPolygons(CV.tolist(), CP)
+    N = vertex_normals(V, polys); lo, hi = CV.min(0) - reach, CV.max(0) + reach
+    cand = np.nonzero(((V >= lo) & (V <= hi)).all(1))[0]
+    D = np.zeros(len(V)); W = np.zeros(len(V))
+    for i in cand:
+        o = V[i] - N[i] * back
+        p, n, f, d = bvh.ray_cast(Vector(o), Vector(N[i]), back + reach)
+        if p is None: continue
+        want = d - back - clearance                     # signed move along the normal to sit just under the cover
+        if want > 0 and not raise_gap: continue
+        D[i] = want; W[i] = 1.0
+    A = adjacency(len(V), polys); X = D * W
+    for _ in range(iters): X = W * D + (1 - W) * (A @ X)
+    X[(W == 0) & (np.abs(X) < 1e-5)] = 0
+    return V + N * X[:, None], int((np.abs(X) > 1e-4).sum())

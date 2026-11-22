@@ -43,7 +43,7 @@ def fit_half():
         if nd > 1e-6 and fl[k] > 0: xzt[k] += d / nd * fl[k]
     # tip must keep a little height so the leaf is a real (quad) point, not a degenerate one
     gap = ytop - ybase
-    ytop[-1] += max(0, 0.008 - gap[-1]) / 2; ybase[-1] -= max(0, 0.008 - gap[-1]) / 2
+    ytop[-1] += max(0, 0.005 - gap[-1]) / 2; ybase[-1] -= max(0, 0.005 - gap[-1]) / 2
     xzt[0, 0] = CX; xzb[0, 0] = CX; xz[0, 0] = CX      # back centre exactly on the symmetry plane
     T = np.column_stack([xzt[:, 0], ytop, xzt[:, 1]]); Bt = np.column_stack([xzb[:, 0], ybase, xzb[:, 1]])
     return Bt, T
@@ -56,6 +56,9 @@ def sheet():
     rows = []
     for u in us:
         rows.append(Bt + (T - Bt) * u)
+    # tuck the buried first row inwards so the lower edge sinks into the coat
+    r0 = rows[0].copy(); d = r0[:, [0, 2]] - AX[[0, 2]]; d /= np.linalg.norm(d, axis=1, keepdims=True) + 1e-9
+    r0[:, [0, 2]] -= d * 0.010; r0[:, 1] -= 0.012; rows[0] = r0
     Ph = np.array(rows)                  # (NU+2, J, 3)  col 0 = back centre
     Pm = Ph.copy(); Pm[:, :, 0] = 2 * CX - Pm[:, :, 0]
     P = np.concatenate([Ph[:, ::-1], Pm[:, 1:]], axis=1)      # tip(+x) ... back ... tip(-x)

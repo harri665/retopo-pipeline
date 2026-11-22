@@ -5,7 +5,7 @@ from scripts.hp_e_common import *
 from scripts.hp_e_belt_fit import belt_r, TH_END_L
 
 Y_C = 0.6397
-RAISE, T = 0.0025, 0.0062
+RAISE, T = 0.0018, 0.0062
 
 def block(th0, th1, width, raise_, spacing=0.0065):
     arc = abs(th1 - th0) * 0.075; n = max(4, int(round(arc / spacing)) + 1)

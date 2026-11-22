@@ -112,6 +112,8 @@ def conform_neck():
     wa = np.clip((58 - ang) / 20.0, 0, 1)
     wy = np.clip((V[:, 1] - 0.785) / 0.02, 0, 1) * np.clip((0.872 - V[:, 1]) / 0.006, 0, 1)
     Vf = V + (V2 - V) * (wa * wy)[:, None]
+    from retopo import hipoly as H
+    Vf = Vf + H.vertex_normals(Vf, P) * (0.0018 * wa * wy)[:, None]      # sit just proud of the coat's copy of the scarf
     meshio.save_obj("hipoly/neck_wrap.obj", Vf, P)
 
 
@@ -120,7 +122,7 @@ def ear(sign=1):
     up = np.array([0.0, 0.98, -0.2])
     c = np.array([CX + HOOD_XH - 0.0008, 0.907, 0.152])
     prof = lambda r: 0.0030 + 0.0045 * np.exp(-((r - 0.84) / 0.13) ** 2) + 0.0028 * np.exp(-((r - 0.48) / 0.13) ** 2) - 0.0026 * np.exp(-(r / 0.30) ** 2)
-    rad = 0.0165; asp = 0.70; nn = 8
+    rad = 0.0175; asp = 0.78; nn = 8
     V, Q, ring = hard.cap(c, n_, rad, prof, n=nn, skirt=[(1.0, 0.0018), (1.05, 0.0), (1.05, -0.0045)], up=up, aspect=asp)
     u, v, w = hard.frame_from_normal(n_, up)
     N1 = nn + 1

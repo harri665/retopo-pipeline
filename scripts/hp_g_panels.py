@@ -8,6 +8,7 @@ THICK = 0.005
 TOP = 0.636
 RC0, OK0 = G.track("outer")
 RC0 = G.top_smooth(G.smooth_track(RC0, OK0, ny=3, naz=1))
+RCF = G.fillcirc(RC0)
 
 
 def solid_and_write(name, P, crease=35, flip_try=True, write=True):
@@ -68,7 +69,7 @@ BK_HEM_L = [(102.0, 0.211), (105.6, 0.209), (107.0, 0.170), (110.3, 0.200), (110
 PLEATS = [107.0, 111.6, 120.5, 131.6, 135.5, 157.0, 160.8, 167.0, 179.0, 192.8, 200.0, 203.5, 219.8, 226.0, 239.6, 248.2]
 
 
-def back(nr=18, relief_gain=2.0):
+def back(nr=21, relief_gain=3.5):
     el = np.array(BK_EDGE_L); elf = lambda y: np.interp(y, el[:, 0], el[:, 1])
     keys = sorted(set([102.0 + 3.2] + PLEATS))
     # fill gaps larger than 7.5 deg
@@ -88,14 +89,14 @@ def back(nr=18, relief_gain=2.0):
         from scipy.ndimage import uniform_filter1d
         sm = uniform_filter1d(R, 3, axis=1, mode="nearest")
         return R + (relief_gain - 1) * (R - sm) * 0  # placeholder, relief applied in az smoothing below
-    P, A, Y, R = G.make_sheet(RC0, cols, hem, TOP, nr)
+    P, A, Y, R = G.make_sheet(RC0, cols, hem, TOP, nr, y_base=0.212, nband=4)
     # pleat relief: amplify deviation from a wide az-average (per row) by relief_gain
     from scipy.ndimage import uniform_filter1d
     dense = np.arange(102, 258.01, 0.25)
     out = R.copy()
     for i in range(nr):
         y = Y[i, 3]
-        rd = G.rsample(RC0, dense, np.full(len(dense), y)); sm = uniform_filter1d(rd, 41, mode="nearest")
+        rd = G.rsample(RCF, dense, np.full(len(dense), y)); sm = uniform_filter1d(rd, 41, mode="nearest")
         gain_r = lambda a: np.interp(a, dense, (relief_gain - 1) * (rd - sm))
         out[i] = R[i] + gain_r(A[i])
     out[0] = out[0]

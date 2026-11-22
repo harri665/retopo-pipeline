@@ -21,7 +21,8 @@ def liner_back(nr=14, nc=12):
     a0, a1 = 116.7, 243.3
     cols = [(lambda y, u=u: a0 + u * (a1 - a0)) for u in np.linspace(0, 1, nc)]
     hem = [(100, 0.197), (260, 0.197)]
-    P, A, Y, R = G.make_sheet(RC, cols, hem, 0.465, nr, tuck=0.0)
+    def clamp(R, A, Y): return np.minimum(R, G.rsample(P1.RCF, A, Y) - 0.016)
+    P, A, Y, R = G.make_sheet(RC, cols, hem, 0.465, nr, tuck=0.0, relief=clamp)
     return P
 
 

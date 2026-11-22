@@ -37,10 +37,12 @@ def upper_surface():
     return _cache["u"]
 
 def shield_outline():
-    zl = [(.218, .572), (.218, .550), (.215, .537), (.207, .523), (.195, .508), (.179, .494), (.159, .479), (.1415, .4705)]
-    zr = [(.092, .572), (.092, .550), (.095, .530), (.101, .516), (.111, .501), (.122, .483), (.1305, .4705)]
-    f = lambda pts: [(y, np.radians(np.degrees(z_to_theta(z, max(y, 0.47)))) ) for z, y in pts]
-    return f(zl), f(zr)
+    """Left/right edge of the shield as (y, theta) tables, measured from the left-view picture (z,y points) and from the radial step
+    where the shield's lower edge drops (r jumps ~8-10 mm): left edge theta -30 @ y .5335, -15 @ .510, 0 @ .4885; right edge 40 @ .5285,
+    25 @ .4925; tip near theta 12 deg, y .4705."""
+    zl = [(.5695, -37.0), (.550, -38.0), (.537, -34.0), (.523, -24.0), (.508, -15.5), (.494, -7.0), (.479, 3.0), (.4705, 10.5)]
+    zr = [(.5695, 52.0), (.550, 52.0), (.5335, 46.0), (.5285, 42.0), (.516, 38.0), (.501, 30.0), (.4925, 26.0), (.483, 21.0), (.4705, 13.5)]
+    return [(y, np.radians(t)) for y, t in zl], [(y, np.radians(t)) for y, t in zr]
 
 def shield_surface():
     if "s" not in _cache:
@@ -76,11 +78,11 @@ def upper_flap(nu=24, nv=6):
     dirs = np.broadcast_to(dvec(th), P.shape)
     return P, thick_sheet(P, T_FLAP, dirs)
 
-def shield(nu=14, nv=14):
+def shield(nu=14, nv=15):
     S = shield_surface(); L, R_ = shield_outline()
     yl = np.array([p[0] for p in L])[::-1]; tl = np.array([p[1] for p in L])[::-1]
     yr = np.array([p[0] for p in R_])[::-1]; tr = np.array([p[1] for p in R_])[::-1]
-    ys = np.linspace(0.5655, 0.4705, nv + 1)
+    ys = np.linspace(0.578, 0.4705, nv + 1)
     P = np.zeros((nv + 1, nu + 1, 3)); D = np.zeros_like(P)
     for i, y in enumerate(ys):
         a, b = np.interp(y, yl, tl), np.interp(y, yr, tr)
@@ -88,7 +90,7 @@ def shield(nu=14, nv=14):
             t = a + (b - a) * j / nu; P[i, j] = to_xyz(t, y, float(S(t, y))); D[i, j] = dvec(t)
     return P, thick_sheet(P, T_SHIELD, D)
 
-def piping(path, closed=True, r=R_PIPE, step=0.0042):
+def piping(path, closed=True, r=R_PIPE, step=0.0058):
     path = np.asarray(path, float)
     n_dir = np.stack([path[:, 0] - CX, np.zeros(len(path)), path[:, 2] - ZC], 1)
     n_dir /= np.linalg.norm(n_dir, axis=1, keepdims=True)
@@ -100,7 +102,7 @@ def piping(path, closed=True, r=R_PIPE, step=0.0042):
     t = np.linspace(0, s[-1], n, endpoint=not closed)
     PP = np.stack([np.interp(t, s, (np.vstack([P, P[:1]]) if closed else P)[:, k]) for k in range(3)], 1)
     Nn = np.stack([PP[:, 0] - CX, np.zeros(len(PP)), PP[:, 2] - ZC], 1)
-    V, Q = hard.sweep(PP, Nn, round_prof(r), closed=closed)
+    V, Q = hard.sweep(PP, Nn, round_prof(r, 6), closed=closed)
     return V, orient_outward(V, Q)
 
 def trims(Pu, Ps):

@@ -56,6 +56,18 @@ def top_smooth(RC, y0=0.43, y1=0.49, naz=10):
     return np.where(np.isnan(RC), RC, RC * (1 - w) + S * w)
 
 
+def fillcirc(RC):
+    R = RC.copy()
+    for j in range(NAZ):
+        v = R[:, j]; ok = ~np.isnan(v)
+        if ok.any() and not ok.all(): R[:, j] = np.interp(np.arange(NY), np.arange(NY)[ok], v[ok])
+    x = np.arange(NAZ)
+    for i in range(NY):
+        v = R[i]; ok = ~np.isnan(v)
+        if ok.any() and not ok.all(): R[i] = np.interp(x, np.r_[x[ok] - NAZ, x[ok], x[ok] + NAZ], np.tile(v[ok], 3))
+    return R
+
+
 def rsample(RC, a, y):
     fa = (np.asarray(a) % 360.0) / DAZ; fy = (np.asarray(y) - YS[0]) / DY
     j0 = np.floor(fa).astype(int) % NAZ; j1 = (j0 + 1) % NAZ; wa = fa - np.floor(fa)
@@ -81,7 +93,7 @@ def interp1(pts, x):
     pts = np.asarray(pts, float); return np.interp(x, pts[:, 0], pts[:, 1])
 
 
-def make_sheet(RC, cols, hem, top, nrows, tuck=0.012, relief=None):
+def make_sheet(RC, cols, hem, top, nrows, tuck=0.012, relief=None, y_base=None, nband=4):
     """Grid (nrows, ncols, 3). cols: list of functions az(y) (one per column, in order). hem: [(az, y)] polyline.
     Rows evenly spaced in y from `top` to the hem of each column (hem vertices exactly on the polyline)."""
     hm = np.asarray(hem, float); hf = lambda a: np.interp(a, hm[:, 0], hm[:, 1])
@@ -90,8 +102,13 @@ def make_sheet(RC, cols, hem, top, nrows, tuck=0.012, relief=None):
         yh = 0.2
         for _ in range(10): yh = float(hf(f(yh)))
         for i in range(nrows):
-            y = top + (yh - top) * i / (nrows - 1); A[i, j] = f(y); Y[i, j] = y
+            if y_base is None: y = top + (yh - top) * i / (nrows - 1)
+            else:
+                nm = nrows - nband   # rows 0..nm-1 horizontal (common y), then the hem band
+                y = top + (y_base - top) * i / (nm - 1) if i < nm else y_base + (yh - y_base) * (i - nm + 1) / nband
+            A[i, j] = f(y); Y[i, j] = y
     R = rsample(RC, A, Y)
+    if np.isnan(R).any(): R = np.where(np.isnan(R), rsample(fillcirc(RC), A, Y), R)
     if relief is not None: R = relief(R, A, Y)
     R[0] -= tuck
     return pt(A, Y, R), A, Y, R

@@ -77,15 +77,28 @@ def base_rings(rows, strap_sink=0.0015):
     """Turn the raw casts into a clean base leather surface: remove the strap/tab bumps with a running minimum along the tube,
     then smooth, then sink the lowest points into the sole. Returns P (rows,NS,3)."""
     Rm = np.array([r[2] for r in rows]); nR = len(rows)
-    Rmin = Rm.copy()
-    for i in range(nR):                       # opening: min over a window of 3 rows, then max over 3 (removes ridges narrower than the window)
-        a, b = max(0, i - 2), min(nR, i + 3); Rmin[i] = Rm[a:b].min(0)
-    Ro = Rmin.copy()
-    for i in range(nR):
-        a, b = max(0, i - 2), min(nR, i + 3); Ro[i] = Rmin[a:b].max(0)
-    Rb = np.minimum(Rm, Ro)
-    Rb = B.smooth(Rb, around=2, along=2)
+    # running-minimum "opening" along the tube removes strap/tab ridges narrower than the window; it is applied on the shaft/upper
+    # ankle rows (0..8) and on the foot rows (15..) only, never on the heel-bend rows where real shape changes quickly.
+    def opening(lo, hi, w):
+        Rm_s = Rm[lo:hi]; n = len(Rm_s); mn = Rm_s.copy(); mx = Rm_s.copy()
+        for i in range(n): mn[i] = Rm_s[max(0, i - w):i + w + 1].min(0)
+        for i in range(n): mx[i] = mn[max(0, i - w):i + w + 1].max(0)
+        return np.minimum(Rm_s, mx)
+    Rb = Rm.copy(); Rb[0:9] = opening(0, 9, 2); Rb[15:] = opening(15, nR, 1)
+    Rb = B.smooth(Rb, around=2, along=1)
     P = np.array([r[0][None, :] + Rb[i][:, None] * r[1] for i, r in enumerate(rows)])
+    # heel: slide the back/low vertices straight back (-F) onto the vertical heel wall of the sculpt so the heel is square
+    C = caster()
+    for i, r in enumerate(rows):
+        if r[3] != "bend": continue
+        for j in range(NS):
+            Lp = toL(P[i, j])
+            if Lp[0] < 0.02 and Lp[2] < 0.052:
+                if Lp[2] < 0.0085: P[i, j, 1] += (0.0085 - Lp[2])
+                ex = [x for x in C.all(P[i, j], -F3, 0.07) if not x[2]]
+                if ex:
+                    q = P[i, j] - F3 * (max(x[0] for x in ex) - 0.0012)
+                    if inbox(q) and toL(q)[0] < Lp[0] + 0.001: P[i, j] = q
     # lowest part sinks into the sole: points under the sole top pull in 3 mm and clamp to y>=0.007
     for i, r in enumerate(rows):
         if r[3] == "shaft": continue

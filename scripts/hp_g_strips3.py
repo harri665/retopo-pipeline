@@ -94,12 +94,12 @@ def main():
     byid = {}
     for n, c in enumerate(comps):
         a, y, r = comp_arrays(c); byid[n] = (a, y, r, c)
-    rfn = lambda ac, y: float(G.rsample(P1.RC0, ac, y))
+    rfn = lambda ac, y: float(G.rsample(P1.RCF, ac, y))
     items = []      # (az_sort, kind, payload)
     for n in (2, 6, 14, 15, 13):
         a, y, r, c = byid[n]
         tl, ag, yg = teeth(a, y, r, prom=0.009 if n in (2, 6) else 0.004)
-        if not tl and n in (13,):
+        if not tl:
             tl = [dict(a0=a.min(), a1=a.max(), tip=a[np.argmin(y)], ytip=y.min(), prof=(ag, yg))]
         for t in tl:
             sl, ic = radius_fit(a, y, r, t["a0"], t["a1"])

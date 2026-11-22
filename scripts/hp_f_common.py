@@ -89,11 +89,18 @@ def grid_quads(nu, nv, off=0, flip=False):
 
 
 def orient_outward(V, Q, centre=None):
-    """Flip all quads if the mesh volume is negative (closed mesh) so normals face outward."""
+    """Flip all quads if the enclosed volume is negative so normals face outward. For meshes with an open (hidden) boundary the
+    volume is taken about the boundary centroid, which makes the missing cap contribute zero."""
+    ec = {}
+    for q in Q:
+        for i in range(len(q)):
+            k = (min(q[i], q[(i + 1) % len(q)]), max(q[i], q[(i + 1) % len(q)])); ec[k] = ec.get(k, 0) + 1
+    bv = sorted({v for k, c in ec.items() if c == 1 for v in k})
+    o = V[bv].mean(0) if bv else np.zeros(3)
     vol = 0.0
     for q in Q:
-        a = V[q[0]]
-        for k in range(1, len(q) - 1): vol += np.dot(a, np.cross(V[q[k]], V[q[k + 1]]))
+        a = V[q[0]] - o
+        for k in range(1, len(q) - 1): vol += np.dot(a, np.cross(V[q[k]] - o, V[q[k + 1]] - o))
     return Q if vol > 0 else [list(q)[::-1] for q in Q]
 
 
