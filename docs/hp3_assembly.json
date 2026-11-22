@@ -1,0 +1,557 @@
+{
+ "objects": {
+  "armhole_roll_l": {
+   "quads": 15832,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 27,
+   "boundary_edges": 860
+  },
+  "armhole_roll_r": {
+   "quads": 11404,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 24,
+   "boundary_edges": 1044
+  },
+  "belt": {
+   "quads": 31892,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 16,
+   "boundary_edges": 1748
+  },
+  "belt_tab": {
+   "quads": 5528,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 1,
+   "boundary_edges": 408
+  },
+  "boot_band1_l": {
+   "quads": 1684,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 280
+  },
+  "boot_band1_r": {
+   "quads": 4024,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 1,
+   "boundary_edges": 528
+  },
+  "boot_band2_l": {
+   "quads": 5352,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 1,
+   "boundary_edges": 488
+  },
+  "boot_band2_r": {
+   "quads": 5804,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 1,
+   "boundary_edges": 528
+  },
+  "boot_foot_l": {
+   "quads": 20056,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 6,
+   "boundary_edges": 1048
+  },
+  "boot_foot_r": {
+   "quads": 15460,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 1116
+  },
+  "boot_shaft_l": {
+   "quads": 24416,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 824
+  },
+  "boot_shaft_r": {
+   "quads": 36352,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 118,
+   "boundary_edges": 1692
+  },
+  "boot_sole_l": {
+   "quads": 30356,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 696
+  },
+  "boot_sole_r": {
+   "quads": 25324,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 636
+  },
+  "boot_tab_l": {
+   "quads": 2848,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 272
+  },
+  "boot_tab_r": {
+   "quads": 2564,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 244
+  },
+  "boot_toe_l": {
+   "quads": 13156,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 2,
+   "boundary_edges": 596
+  },
+  "boot_toe_r": {
+   "quads": 12432,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 1,
+   "boundary_edges": 624
+  },
+  "bracer_cuff_l": {
+   "quads": 8948,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 860
+  },
+  "bracer_cuff_r": {
+   "quads": 10724,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 844
+  },
+  "bracer_plate_l": {
+   "quads": 22072,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 8,
+   "boundary_edges": 828
+  },
+  "bracer_plate_r": {
+   "quads": 22944,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 788
+  },
+  "bracer_ring_strap_l": {
+   "quads": 4708,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 3,
+   "boundary_edges": 520
+  },
+  "bracer_ring_strap_r": {
+   "quads": 3248,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 3,
+   "boundary_edges": 372
+  },
+  "bracer_tube_l": {
+   "quads": 7696,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 1,
+   "boundary_edges": 496
+  },
+  "bracer_tube_r": {
+   "quads": 5980,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 1,
+   "boundary_edges": 492
+  },
+  "coat_lower": {
+   "quads": 14096,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 2,
+   "boundary_edges": 1144
+  },
+  "coat_upper": {
+   "quads": 53260,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 9,
+   "boundary_edges": 2160
+  },
+  "collar": {
+   "quads": 47572,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 20,
+   "boundary_edges": 1580
+  },
+  "glove_l": {
+   "quads": 56352,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 4,
+   "boundary_edges": 304
+  },
+  "glove_r": {
+   "quads": 51092,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 256
+  },
+  "hat_band": {
+   "quads": 38400,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 67,
+   "boundary_edges": 2072
+  },
+  "hat_brim": {
+   "quads": 48328,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 1,
+   "boundary_edges": 1028
+  },
+  "hat_crown": {
+   "quads": 23028,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 480
+  },
+  "hip_band_l": {
+   "quads": 14736,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 956
+  },
+  "hip_band_r": {
+   "quads": 26308,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 22,
+   "boundary_edges": 1248
+  },
+  "hip_cord": {
+   "quads": 10932,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 5,
+   "boundary_edges": 728
+  },
+  "hip_shield_l": {
+   "quads": 17404,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 948
+  },
+  "hip_shield_r": {
+   "quads": 24648,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 14,
+   "boundary_edges": 888
+  },
+  "hood": {
+   "quads": 45016,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 15,
+   "boundary_edges": 1972
+  },
+  "lapel_l": {
+   "quads": 22576,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 892
+  },
+  "lapel_r": {
+   "quads": 16456,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 19,
+   "boundary_edges": 556
+  },
+  "mask": {
+   "quads": 25920,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 22,
+   "boundary_edges": 960
+  },
+  "neck_wrap": {
+   "quads": 18124,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 812
+  },
+  "pocket_flap_l": {
+   "quads": 12336,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 7,
+   "boundary_edges": 800
+  },
+  "pocket_flap_r": {
+   "quads": 8412,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 1,
+   "boundary_edges": 692
+  },
+  "shoulder_arch_l": {
+   "quads": 28852,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 19,
+   "boundary_edges": 980
+  },
+  "shoulder_arch_r": {
+   "quads": 27732,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 2,
+   "boundary_edges": 1032
+  },
+  "shoulder_cap_l": {
+   "quads": 26032,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 1,
+   "boundary_edges": 864
+  },
+  "shoulder_cap_r": {
+   "quads": 25100,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 5,
+   "boundary_edges": 872
+  },
+  "shoulder_flap_l": {
+   "quads": 11776,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 7,
+   "boundary_edges": 1008
+  },
+  "shoulder_flap_r": {
+   "quads": 9804,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 1,
+   "boundary_edges": 660
+  },
+  "skirt_back": {
+   "quads": 104772,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 35,
+   "boundary_edges": 3204
+  },
+  "skirt_front_l": {
+   "quads": 123724,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 183,
+   "boundary_edges": 4240
+  },
+  "skirt_front_r": {
+   "quads": 100532,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 52,
+   "boundary_edges": 1960
+  },
+  "skirt_liner": {
+   "quads": 16756,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 2,
+   "boundary_edges": 964
+  },
+  "sleeve_l": {
+   "quads": 45452,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 48,
+   "boundary_edges": 1020
+  },
+  "sleeve_r": {
+   "quads": 51576,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 1,
+   "boundary_edges": 992
+  },
+  "trousers": {
+   "quads": 39364,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 9,
+   "boundary_edges": 3012
+  },
+  "underskirt": {
+   "quads": 96316,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 23,
+   "boundary_edges": 4016
+  },
+  "wrist_strap_l": {
+   "quads": 6980,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 0,
+   "boundary_edges": 624
+  },
+  "wrist_strap_r": {
+   "quads": 7616,
+   "quad_ratio": 1.0,
+   "nonmanifold": 0,
+   "winding": 0,
+   "zero_area": 7,
+   "boundary_edges": 600
+  }
+ },
+ "source_to_model_mm": {
+  "all": {
+   "median": 0.01,
+   "p95": 0.32,
+   "over_5mm_pct": 0.72,
+   "over_1mm_pct": 2.42
+  },
+  "boots": {
+   "median": 0.01,
+   "p95": 0.39,
+   "over_5mm_pct": 1.2,
+   "over_1mm_pct": 2.96
+  },
+  "legs+skirt": {
+   "median": 0.01,
+   "p95": 0.53,
+   "over_5mm_pct": 1.07,
+   "over_1mm_pct": 3.13
+  },
+  "hips": {
+   "median": 0.01,
+   "p95": 0.52,
+   "over_5mm_pct": 0.39,
+   "over_1mm_pct": 3.35
+  },
+  "belt": {
+   "median": 0.01,
+   "p95": 0.18,
+   "over_5mm_pct": 0.13,
+   "over_1mm_pct": 1.22
+  },
+  "chest+arms": {
+   "median": 0.01,
+   "p95": 0.12,
+   "over_5mm_pct": 0.07,
+   "over_1mm_pct": 0.71
+  },
+  "head+collar": {
+   "median": 0.01,
+   "p95": 0.13,
+   "over_5mm_pct": 0.19,
+   "over_1mm_pct": 0.85
+  },
+  "hat": {
+   "median": 0.0,
+   "p95": 0.06,
+   "over_5mm_pct": 0.0,
+   "over_1mm_pct": 0.26
+  }
+ },
+ "totals": {
+  "objects": 62,
+  "quads": 1648184,
+  "not_all_quads": [],
+  "nonmanifold": [],
+  "winding": []
+ }
+}

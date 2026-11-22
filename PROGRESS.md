@@ -79,3 +79,9 @@ out; hip cord kept as its own object.
   needs one more rebuild with margins. armhole_roll_r failed (3.7 mm): check its label.
 - NEXT: review merged lower-body labels (`seeds view`), fix trousers / hip shields / coat_lower / skirt
   holes with seeds, then `python -m scripts.hp3_build_all` (everything), then to-do items 3-5.
+- FULL BUILD DONE: 62 objects in `hipoly3/`, 1.65M quads, all quads / manifold. Whole-model source->model:
+  p95 0.32 mm, 0.7% beyond 5 mm (pass 2 was 15.7 mm / 21%). Sheets `docs/hp3_<region>.png`, numbers
+  `docs/hp3_assembly.json`, export `export/trooper_highpoly_v3.glb|fbx` (`scripts/hp3_assemble.py --sheets --export`).
+  Sent to user. Remaining polish: ragged borders at back hip bands / shield edges, small holes (red
+  specks) in skirt, boot_shaft_r 1.6 mm, studs/buttons still fused to parents (to-do item 3), 1.65M quads
+  is heavy (could raise --edge).
