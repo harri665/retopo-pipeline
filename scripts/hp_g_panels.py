@@ -69,7 +69,7 @@ BK_HEM_L = [(102.0, 0.211), (105.6, 0.209), (107.0, 0.170), (110.3, 0.200), (110
 PLEATS = [107.0, 111.6, 120.5, 131.6, 135.5, 157.0, 160.8, 167.0, 179.0, 192.8, 200.0, 203.5, 219.8, 226.0, 239.6, 248.2]
 
 
-def back(nr=18, relief_gain=3.5):
+def back(nr=20, relief_gain=3.5):
     el = np.array(BK_EDGE_L); elf = lambda y: np.interp(y, el[:, 0], el[:, 1])
     hv = np.array(BK_HEM_L)
     corners = [hv[i, 0] for i in range(1, len(hv) - 1) if abs(hv[i, 1] - hv[i - 1, 1]) > 0.012 or abs(hv[i + 1, 1] - hv[i, 1]) > 0.012]
@@ -86,6 +86,11 @@ def back(nr=18, relief_gain=3.5):
             n = int(np.ceil((b - a) / 9.0))
             for k in range(1, n): allk.append(a + (b - a) * k / n)
         allk.append(b)
+    for (a0, y0), (a1, y1) in zip(BK_HEM_L[:-1], BK_HEM_L[1:]):     # steep tooth sides: extra columns so no hem edge is long
+        n = int(np.ceil(abs(y1 - y0) / 0.022))
+        for k in range(1, n):
+            a = a0 + (a1 - a0) * k / n
+            if 105.2 <= a <= 254.8: allk.append(a)
     allk = sorted(set(allk + [360 - 105.2, 105.2]))
     inner = [k for k in allk if 105.2 <= k <= 254.8]
     cols = [lambda y: elf(y)] + [(lambda y, a=a: a) for a in inner] + [lambda y: 360 - elf(y)]

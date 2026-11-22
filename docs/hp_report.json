@@ -37,7 +37,7 @@
    "unused": 0
   },
   "boot_ankle_strap_l": {
-   "quads": 7488,
+   "quads": 8384,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -46,7 +46,7 @@
    "unused": 0
   },
   "boot_ankle_strap_r": {
-   "quads": 7488,
+   "quads": 8384,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -72,26 +72,8 @@
    "boundary": 0,
    "unused": 0
   },
-  "boot_forefoot_pad_l": {
-   "quads": 1504,
-   "quad_ratio": 1.0,
-   "nonmanifold": 0,
-   "winding": 0,
-   "zero_area": 0,
-   "boundary": 0,
-   "unused": 0
-  },
-  "boot_forefoot_pad_r": {
-   "quads": 1504,
-   "quad_ratio": 1.0,
-   "nonmanifold": 0,
-   "winding": 0,
-   "zero_area": 0,
-   "boundary": 0,
-   "unused": 0
-  },
   "boot_heel_block_l": {
-   "quads": 2528,
+   "quads": 2112,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -100,7 +82,7 @@
    "unused": 0
   },
   "boot_heel_block_r": {
-   "quads": 2528,
+   "quads": 2112,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -144,24 +126,6 @@
    "boundary": 0,
    "unused": 0
   },
-  "boot_l": {
-   "quads": 13680,
-   "quad_ratio": 1.0,
-   "nonmanifold": 0,
-   "winding": 0,
-   "zero_area": 0,
-   "boundary": 128,
-   "unused": 0
-  },
-  "boot_r": {
-   "quads": 13680,
-   "quad_ratio": 1.0,
-   "nonmanifold": 0,
-   "winding": 0,
-   "zero_area": 0,
-   "boundary": 128,
-   "unused": 0
-  },
   "boot_second_strap_l": {
    "quads": 3168,
    "quad_ratio": 1.0,
@@ -181,7 +145,7 @@
    "unused": 0
   },
   "boot_sole_l": {
-   "quads": 4992,
+   "quads": 7744,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -190,7 +154,7 @@
    "unused": 0
   },
   "boot_sole_r": {
-   "quads": 4992,
+   "quads": 7744,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -388,7 +352,7 @@
    "unused": 0
   },
   "coat_inner_liner_back": {
-   "quads": 5344,
+   "quads": 7584,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -397,7 +361,7 @@
    "unused": 0
   },
   "coat_inner_liner_front_l": {
-   "quads": 2656,
+   "quads": 12256,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -406,7 +370,7 @@
    "unused": 0
   },
   "coat_inner_liner_front_r": {
-   "quads": 2656,
+   "quads": 12256,
    "quad_ratio": 1.0,
    "nonmanifold": 0,
    "winding": 0,
@@ -1153,7 +1117,7 @@
    "unused": 0
   }
  },
- "total_polys": 734520,
+ "total_polys": 732056,
  "issues": {
   "mask_faceplate": {
    "quads": 8896,

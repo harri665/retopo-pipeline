@@ -45,7 +45,7 @@ def liner_front_L(nr=24, nc=16):
     return P
 
 
-def centre_strip(nr=14, nc=8):
+def centre_strip(nr=20, nc=14):
     C = B.Caster()
     xs = np.linspace(0.455, 0.513, nc)
     def zat(x, y):

@@ -67,7 +67,7 @@ def top_extrap(RC, y0=0.44, fit=(0.34, 0.44), wcols=24):
     ok = np.isfinite(sl); x = np.arange(NAZ)
     if ok.any(): sl = np.interp(x, np.r_[x[ok] - NAZ, x[ok], x[ok] + NAZ], np.tile(sl[ok], 3))
     from scipy.ndimage import uniform_filter1d
-    sl = np.clip(uniform_filter1d(sl, wcols, mode="wrap"), -0.6, -0.05)
+    sl = np.clip(0.6 * uniform_filter1d(sl, wcols, mode="wrap"), -0.4, -0.03)
     for j in range(NAZ):
         if np.isnan(RC[i0, j]): continue
         R[i0 + 1:, j] = RC[i0, j] + sl[j] * (YS[i0 + 1:] - YS[i0])
