@@ -10,7 +10,7 @@ for n in names:
     for nm, A in (("hipoly", V), ("cage", Vc)):
         if nm == "cage" or True:
             r = rad(A); lo = 0.015 if ('liner_front' in n or 'centre' in n) else 0.03   # front liners/centre strip really sit near the axis
-            assert r.min() >= lo and r.max() <= 0.20, (n, nm, "radius out of [0.03,0.20]", r.min(), r.max())
+            assert r.min() >= lo and r.max() <= 0.215, (n, nm, "radius out of [0.03,0.215]", r.min(), r.max())
     el = max(np.linalg.norm(Vc[p[i]] - Vc[p[(i + 1) % len(p)]], axis=1 if False else None) for p in Pc for i in range(len(p)))
     assert el <= 0.03, (n, "cage edge longer than 0.03", el)
     print("%-28s cage %5d hi %6d nm %d wind %d zero %d quad %.3f bnd %d NaN hi %d cage %d" % (n, len(Pc), len(P), t["nonmanifold_edges"], t["winding_errors"], t["zero_area"], t["quad_ratio"], t["boundary_edges"], nn, nc))

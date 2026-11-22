@@ -66,7 +66,7 @@ def tip_vertices(V, P, nb):
     return tips
 
 
-DMAX = 0.004
+DMAX = 0.003
 
 if __name__ == "__main__":
     V, P = meshio.load_obj("parts/d_glove_raw_l.obj")
@@ -76,7 +76,12 @@ if __name__ == "__main__":
     TIPS = [np.array(G[k][1]) for k in G]
     # fingertip domes (cage ends at the apex) stay as built: closed, rounded, not pulled onto the ragged sculpt ends
     protect = set(bv) | {i for i in range(len(V)) if min(np.linalg.norm(V[i] - t) for t in TIPS) < 0.0105}
-    V1 = relax_cage(V, P, fixed=protect)
+    V1 = relax_cage(V, P, iters=8, lam=0.3, fixed=protect)
+    Cs = B.Caster()
+    for i in range(len(V1)):                    # pull the relaxed cage back onto the sculpt skin so dmax 0.003 can reach the knuckle pads
+        if i in protect or V1[i, 0] < 0.852: continue
+        q, n, f, d = Cs.nearest(V1[i])
+        if d < 0.006: V1[i] = 0.35 * V1[i] + 0.65 * q
     print("max relax move (mm)", 1000 * np.linalg.norm(V1 - V, axis=1).max())
     ex = [(t, 0.0105) for t in TIPS]
     # keep the sculpt's own welt ridge and wrist cuff bump off the glove: those are modelled as separate bands
@@ -84,10 +89,12 @@ if __name__ == "__main__":
     for x in np.arange(0.838, 0.8531, 0.005):
         ex.append((np.array([x, 0.7317 + 0.0, 0.1755 + 0.28 * (x - 0.84)]), 0.019))
     V2, P2 = hipoly.subdivide(V1, P, 2)
-    V3, W = hipoly.project(V2, P2, dmax=DMAX, exclude=ex)
-    nb2 = hipoly.neighbours(len(V3), P2)
-    keep = {i for i in range(len(V3)) if min(np.linalg.norm(V3[i] - t) for t in TIPS) < 0.0105}
-    V3 = relax_cage(V3, P2, iters=4, lam=0.3, fixed=keep)      # remove the sculpt's triangle faceting
+    V3, W = hipoly.project(V2, P2, dmax=DMAX, exclude=ex, relax=0)
+    # thumb-base mound and pinky base: wider pull onto the sculpt in those two small zones only
+    for cen, r0, r1, dm in (((0.868, 0.742, 0.203), 0.014, 0.024, 0.006), ((0.887, 0.692, 0.186), 0.010, 0.020, 0.008)):
+        Vb, _ = hipoly.project(V2, P2, dmax=dm, exclude=ex, relax=0)
+        dz = np.linalg.norm(V2 - np.array(cen), axis=1); wz = np.clip((r1 - dz) / (r1 - r0), 0, 1); wz = wz * wz * (3 - 2 * wz)
+        V3 = V3 + wz[:, None] * (Vb - V3)
     print("conform weight mean", W.mean())
     meshio.save_obj("hp_cages/glove_l.obj", V1, P); meshio.save_obj("hipoly/glove_l.obj", V3, P2)
     Vm, Pm = B.mirror_x(V1, P); meshio.save_obj("hp_cages/glove_r.obj", Vm, Pm)

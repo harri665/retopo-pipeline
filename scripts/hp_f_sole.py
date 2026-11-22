@@ -24,15 +24,30 @@ def sole_sides(P, s, L, sh, st, nu=12, nv=8, hw=0.040, tw=0.052):
     return [A, Bc, Cc, D]
 
 
+def front_plate(P, ucut, profile, inset=0.0, nA=7, nT=8, hw=0.034):
+    """Plate over the part of the outline in front of u = ucut (flush with the outline when inset=0)."""
+    Pi = inset_ring(P, inset) if inset else P
+    s_i = arclen(Pi); Li = s_i[-1]; u = Pi[:, 0]; N = len(Pi); it = int(np.argmax(u)); s_t = s_i[it]
+    cin = [i for i in range(N) if u[(i - 1) % N] <= ucut < u[i]]; cin.sort(key=lambda i: Pi[i, 1]); i_in = cin[0]
+    cout = [i for i in range(N) if u[(i - 1) % N] >= ucut > u[i]]; cout.sort(key=lambda i: Pi[i, 1]); i_out = cout[-1]
+    d_in = ((s_i[i_in] - s_t + Li / 2) % Li) - Li / 2; d_out = ((s_i[i_out] - s_t + Li / 2) % Li) - Li / 2
+    s0 = sub_polyline(Pi, s_t + d_in, s_t - hw, nA); s1 = sub_polyline(Pi, s_t - hw, s_t + hw, nT)
+    s2 = sub_polyline(Pi, s_t + hw, s_t + d_out, nA); s3 = np.linspace(s2[-1], s0[0], nT + 1)
+    return plate([s0, s1, s2, s3], profile)
+
+
 def main():
     P, s, L, sh, st = outline_data()
     sides = sole_sides(P, s, L, sh, st)
+    # sole = full slab (y 0.0046-0.0125, measured: arch/heel underside recess 4.6 mm) + the forefoot underlay (y 0-0.0056, u>0.0495),
+    # flush with the sole edge, so the forefoot edge is 12.5 mm thick and the arch is a real step. Two shells in one object.
     prof = [(0.0012, Y_TOP), (0.0, Y_TOP - 0.0012), (0.0, Y_BOT + 0.0012), (0.0012, Y_BOT)]
-    V, Q = plate(sides, prof)
+    V1, Q1 = plate(sides, prof)
+    V2, Q2 = front_plate(P, 0.0495, [(0.0, 0.0058), (0.0, 0.0012), (0.0012, 0.0)])
+    V, Q = B.merge([(V1, Q1), (V2, Q2)])
     n = save_object("boot_sole_l", toW(V), Q, crease_angle=None, levels=2)
     print("sole", n)
     heel_block(P, s, L, sh, st)
-    forefoot_pad(P, s, L, sh, st)
     welt(P)
 
 
@@ -40,7 +55,7 @@ def arc_between(P, s, L, a, b, n):
     return sub_polyline(P, a, b, n)
 
 
-def heel_block(P, s, L, sh, st, ucut=0.016, inset=0.0018):
+def heel_block(P, s, L, sh, st, ucut=0.021, inset=0.0005):
     Pi = inset_ring(P, inset)
     # find arclength of the cut points on the inset ring: crossing of u=ucut on the heel side
     s_i = arclen(Pi); Li = s_i[-1]
@@ -59,7 +74,7 @@ def heel_block(P, s, L, sh, st, ucut=0.016, inset=0.0018):
     sC = sub_polyline(Pi, s_h + hw, s_h + d_in, nA)
     # cut line from inner cut back to outer cut
     sD = np.linspace(sC[-1], sA[0], nH + 1)
-    prof = [(0.0015, 0.0062), (0.0, 0.0048), (0.0, 0.0012), (0.0010, 0.0)]
+    prof = [(0.0, 0.0058), (0.0, 0.0012), (0.0010, 0.0)]
     V, Q = plate([sA, sH, sC, sD], prof)
     n = save_object("boot_heel_block_l", toW(V), Q, crease_angle=None, levels=2)
     print("heel block", n)

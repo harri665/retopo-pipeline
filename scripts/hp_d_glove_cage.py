@@ -63,20 +63,27 @@ def finger(C, A, nsta, spacing_cap, others=None):
     T, D = frames_side(ax)
     own = cKDTree(B.resample_polyline(A, n=60))
     oth = cKDTree(others) if others is not None and len(others) else None
-    S = len(ax); R = np.full((S, NS), np.nan)
+    S = len(ax); R = np.full((S, NS), np.nan); ax = ax.copy()
+    # hp_d attempt 2: measure the real finger section. Cast OUTWARD from the axis in the 8 section directions (first
+    # surface = the finger's own skin), recentre the axis on the mid of opposite hits, repeat. Fingers are ~5-6 mm radius
+    # all the way to the tip (sausages), so no taper is imposed.
     for i in range(S):
+        c = ax[i].copy()
+        for _ in range(3):
+            P = []
+            for j in range(NS):
+                h = C.first(c, D[i, j], 0.02); P.append(c + D[i, j] * h[3] if h and h[3] > 0.0025 else c)
+            P = np.array(P); c = c + 0.7 * ((P[:4] + P[4:]) / 2 - c).mean(0)
+        if np.linalg.norm(c - ax[i]) < 0.003 and i > 1: ax[i] = c
         for j in range(NS):
-            d = D[i, j]; o = ax[i] + d * 0.016
-            for (t, f, enter) in C.all(o, -d, 0.02):
-                if not enter: continue
-                pnt = o - d * t
-                dn = own.query(pnt)[0]
-                if dn < 0.0135 and (oth is None or dn <= oth.query(pnt)[0]):
-                    R[i, j] = 0.016 - t; break
-    for j in range(NS):                      # miss -> opposite side
+            h = C.first(ax[i], D[i, j], 0.02)
+            if h and h[3] > 0.0025: R[i, j] = h[3]
+    rm0 = float(np.nanmedian(R[4:S - 1])); hi = rm0 * (1.9 if A.shape[0] and others is not None and len(spacing_cap) == 3 and spacing_cap[0] == 0.011 else 1.2)
+    R = np.where(np.isnan(R) | (R > hi) | (R < 0.75 * rm0), np.nan, R)
+    for j in range(NS):
         m = np.isnan(R[:, j]); R[m, j] = R[m, (j + 4) % NS]
-    R = np.minimum(R, 0.0125)
     R = B.fill_nan(R)
+    R = np.nan_to_num(R, nan=rm0)
     R = B.smooth(R, around=1, along=1)
     rel = np.clip((np.arange(S) - 1) / 3.0, 0, 1); rel = rel * rel * (3 - 2 * rel)      # caps only matter at the base
     for j in (0, 4):
@@ -89,7 +96,7 @@ def finger(C, A, nsta, spacing_cap, others=None):
     lims[0] = spacing_cap[0]; lims[4] = spacing_cap[1]
     for i, g_ in enumerate([0.80, 0.90, 0.96, 1.0]):
         for j in range(NS): R[i, j] = max(R[i, j], min(g_ * rmid, lims[j]))
-    R[-2] = R[-3] * 0.85; R[-1] = R[-3] * 0.55          # round tip
+    R[-2] = R[-3] * 0.97; R[-1] = R[-3] * 0.82          # full, rounded tip (dome apex adds 0.9 r)
     return ax, R, D, T
 
 

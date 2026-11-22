@@ -58,10 +58,12 @@ def main():
     dirs = np.cos(th)[:, None] * F3 + np.sin(th)[:, None] * S3
     P, N = strap_path(S, A0, dirs, True, nsm=2)
     Vs, Qs = sweep_cage(P, N, 0.0150, 0.0030, 0.0009, closed=True)
-    # tab on the outer side: theta 62..112 deg (0 = front, 90 = outer), a flat plate lying on the strap
-    sel = (np.rad2deg(th) >= 46) & (np.rad2deg(th) <= 106); ti = np.where(sel)[0]
-    Pt, Nt = P[ti] + N[ti] * 0.0030, N[ti]
-    Vt, Qt = sweep_cage(Pt, Nt, 0.0170, 0.0036, 0.0012, sink=0.0006)
+    # tab on the outer side: 26 mm long x 15 mm tall plate (measured on the sculpt: u -0.009..0.017, y 0.058-0.073, ~6 mm proud) standing proud on the strap, theta 57..109 deg (0 = front, 90 = outer)
+    tth = np.deg2rad(np.linspace(57, 109, 13)); tdirs = np.cos(tth)[:, None] * F3 + np.sin(tth)[:, None] * S3
+    Pt0, Nt0 = ring_hits(S, A0, tdirs)
+    Pt0 = smooth_rows(Pt0, 1); Nt0 = smooth_rows(Nt0, 2); Nt0 /= np.linalg.norm(Nt0, axis=1, keepdims=True)
+    Pt, Nt = Pt0 + Nt0 * 0.0032, Nt0
+    Vt, Qt = sweep_cage(Pt, Nt, 0.0150, 0.0044, 0.0018, sink=0.0006)
     # rear roll: thick rounded roll over the strap on the back half, 120..250 deg
     sel = (np.rad2deg(th) >= 130) & (np.rad2deg(th) <= 250); ri = np.where(sel)[0]
     Pr, Nr = P[ri] + N[ri] * 0.0018, N[ri]
@@ -69,7 +71,7 @@ def main():
     V, Q = B.merge([(Vs, Qs), (Vt, Qt), (Vr, Qr)])
     out["ankle"] = save_object("boot_ankle_strap_l", V, Q, crease_angle=None, levels=2)
     # ankle buckle frame: front-outer, theta 38 deg on the strap
-    k = int(np.argmin(abs(np.rad2deg(th) - 20)))
+    k = int(np.argmin(abs(np.rad2deg(th) - 22)))
     tang = np.cross(Y3, N[k]); tang /= np.linalg.norm(tang)
     Vb1, Qb1 = buckle(P[k] + N[k] * 0.0030, N[k], Y3, 0.0140, 0.0190)
     # ---------------- instep strap + second strap (diagonal rings)

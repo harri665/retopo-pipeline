@@ -56,6 +56,24 @@ def top_smooth(RC, y0=0.43, y1=0.49, naz=10):
     return np.where(np.isnan(RC), RC, RC * (1 - w) + S * w)
 
 
+def top_extrap(RC, y0=0.44, fit=(0.34, 0.44), wcols=24):
+    """Above y0 the coat is hidden under the hip flaps/belt: replace the tracked values (which can lock onto flap shells)
+    by the straight continuation of each column, with its slope smoothed over neighbouring azimuths."""
+    R = RC.copy(); i0 = int(round((y0 - YS[0]) / DY)); ia, ib = [int(round((v - YS[0]) / DY)) for v in fit]
+    sl = np.full(NAZ, np.nan)
+    for j in range(NAZ):
+        v = RC[ia:ib + 1, j]
+        if np.isfinite(v).all(): sl[j] = np.polyfit(YS[ia:ib + 1], v, 1)[0]
+    ok = np.isfinite(sl); x = np.arange(NAZ)
+    if ok.any(): sl = np.interp(x, np.r_[x[ok] - NAZ, x[ok], x[ok] + NAZ], np.tile(sl[ok], 3))
+    from scipy.ndimage import uniform_filter1d
+    sl = np.clip(uniform_filter1d(sl, wcols, mode="wrap"), -0.6, -0.05)
+    for j in range(NAZ):
+        if np.isnan(RC[i0, j]): continue
+        R[i0 + 1:, j] = RC[i0, j] + sl[j] * (YS[i0 + 1:] - YS[i0])
+    return R
+
+
 def fillcirc(RC):
     R = RC.copy()
     for j in range(NAZ):

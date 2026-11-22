@@ -7,7 +7,7 @@ from retopo import build as B, hipoly, meshio
 THICK = 0.005
 TOP = 0.636
 RC0, OK0 = G.track("outer")
-RC0 = G.top_smooth(G.smooth_track(RC0, OK0, ny=3, naz=1))
+RC0 = G.top_extrap(G.smooth_track(RC0, OK0, ny=3, naz=1))
 RCF = G.fillcirc(RC0)
 
 

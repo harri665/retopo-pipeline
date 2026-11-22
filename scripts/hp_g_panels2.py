@@ -3,7 +3,7 @@ import sys, numpy as np
 from scripts import hp_g_common as G, hp_g_panels as P1
 from retopo import build as B, hard, hipoly, meshio
 
-RC1, OK1 = G.track("second"); RC1 = G.top_smooth(G.smooth_track(RC1, OK1, ny=3, naz=2))
+RC1, OK1 = G.track("second"); RC1 = G.top_extrap(G.smooth_track(RC1, OK1, ny=3, naz=2))
 
 
 def oriented(P, check):
@@ -30,11 +30,18 @@ FLN_IN = [(0.165, 41.0), (0.20, 38.5), (0.26, 37.0), (0.32, 34.8), (0.38, 32.2),
 FLN_HEM = [(41.0, 0.165), (45.5, 0.222), (61.8, 0.256)]
 
 
-def liner_front_L(nr=22, nc=10):
+def liner_front_L(nr=24, nc=16):
     RC = G.fill_az(RC1, 10, 66)
     ein = np.array(FLN_IN); elf = lambda y: np.interp(y, ein[:, 0], ein[:, 1])
     cols = [(lambda y, u=u: elf(y) + u * (61.8 - elf(y))) for u in np.linspace(0, 1, nc)]
-    P, A, Y, R = G.make_sheet(RC, cols, FLN_HEM, 0.48, nr, tuck=0.0)
+    def tidy(R, A, Y):
+        R = np.maximum(R, 0.058)
+        for _ in range(3):
+            Q = R.copy(); Q[:, 1:-1] = 0.25 * R[:, :-2] + 0.5 * R[:, 1:-1] + 0.25 * R[:, 2:]; R = Q
+        for _ in range(3):
+            Q = R.copy(); Q[1:-1] = 0.25 * R[:-2] + 0.5 * R[1:-1] + 0.25 * R[2:]; R = Q
+        return np.minimum(R, G.rsample(P1.RCF, A, Y) - 0.016)
+    P, A, Y, R = G.make_sheet(RC, cols, FLN_HEM, 0.48, nr, tuck=0.0, relief=tidy)
     return P
 
 
