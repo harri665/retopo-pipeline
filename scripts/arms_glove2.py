@@ -11,10 +11,10 @@ NS = 8
 XW = 0.838
 # base point on the knuckle line, tip surface point (guesses read from renders)
 G = {
-    'A': ([0.889, 0.738, 0.192], [0.927, 0.7305, 0.205]),
-    'B': ([0.887, 0.7215, 0.190], [0.9275, 0.710, 0.201]),
-    'C': ([0.885, 0.706, 0.188], [0.921, 0.697, 0.197]),
-    'D': ([0.882, 0.691, 0.186], [0.903, 0.684, 0.191]),
+    'A': ([0.890, 0.7385, 0.192], [0.927, 0.7305, 0.205]),
+    'B': ([0.888, 0.722, 0.190], [0.9275, 0.710, 0.201]),
+    'C': ([0.884, 0.709, 0.189], [0.921, 0.697, 0.197]),
+    'D': ([0.874, 0.700, 0.187], [0.903, 0.684, 0.191]),
     'T': ([0.862, 0.744, 0.190], [0.889, 0.762, 0.222]),
 }
 FSTA = np.array([0, 0.12, 0.25, 0.31, 0.37, 0.52, 0.59, 0.66, 0.82, 0.95])
@@ -103,13 +103,14 @@ def build(C):
     sk = {k: skel(H, *G[k], tipback=RTIP if k != 'T' else 0.0075) for k in G}
     cy = {k: sk[k][0, 1] for k in names}
     ys = [cy[k] for k in names]
+    bp = [sk[k][0] for k in names]
     # ---------------- fingers (ring 0 sits on the knuckle line, exactly at the skeleton start)
     F = {}
     for ii, k in enumerate(names):
-        gaps = [abs(ys[ii] - ys[ii + d]) for d in (-1, 1) if 0 <= ii + d < 4]
+        gaps = [np.linalg.norm(bp[ii][1:] - bp[ii + d][1:]) for d in (-1, 1) if 0 <= ii + d < 4]
         nb = min(gaps) / 2 - 0.0012 if gaps else 0.009
-        up = (abs(ys[ii] - ys[ii - 1]) / 2 - 0.0012) if ii > 0 else 0.0085     # toward A (+y)
-        dn = (abs(ys[ii] - ys[ii + 1]) / 2 - 0.0012) if ii < 3 else 0.0085
+        up = (gaps[0] / 2 - 0.0012) if ii > 0 else 0.0085     # toward A (+y)
+        dn = (gaps[-1] / 2 - 0.0012) if ii < 3 else 0.0085
         # j=0 is +y side, j=4 is -y side
         ax, R, D, T = finger(C, sk[k], FSTA, (min(up, 0.0085), min(dn, 0.0085), min(nb, 0.0085)))
         F[k] = (ax, R, D, T)
