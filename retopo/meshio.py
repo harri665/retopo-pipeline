@@ -91,3 +91,36 @@ def triangulate(polys):
         for k in range(1, len(p) - 1):
             T.append((p[0], p[k], p[k + 1])); src.append(i)
     return np.array(T, np.int32).reshape(-1, 3), np.array(src, np.int32)
+
+
+def load_source_colors():
+    """Per-face base colour (uint8 RGB) for the faces returned by load_source(), sampled at face centroids."""
+    p = os.path.join(CACHE, "source_rgb.npy")
+    if os.path.exists(p): return np.load(p)
+    import io
+    from PIL import Image
+    Image.MAX_IMAGE_PIXELS = None
+    f = open(SRC_GLB, "rb"); f.read(12)
+    clen, _ = struct.unpack("<I4s", f.read(8)); js = json.loads(f.read(clen)); f.read(8); off = f.tell()
+    acc, bv = js["accessors"], js["bufferViews"]
+
+    def read(ai):
+        a = acc[ai]; v = bv[a["bufferView"]]; dt = np.dtype("<" + _CT[a["componentType"]]); n = _NC[a["type"]]
+        stride = v.get("byteStride", 0) or dt.itemsize * n
+        f.seek(off + v.get("byteOffset", 0) + a.get("byteOffset", 0))
+        raw = np.frombuffer(f.read(stride * a["count"]), dtype=np.uint8).reshape(a["count"], stride)[:, : dt.itemsize * n]
+        return np.ascontiguousarray(raw).view(dt).reshape(a["count"], n)
+
+    pr = js["meshes"][0]["primitives"][0]
+    P = read(pr["attributes"]["POSITION"]).astype(np.float64) * 1.52476132e-05
+    UV = read(pr["attributes"]["TEXCOORD_0"]).astype(np.float64); I = read(pr["indices"]).reshape(-1, 3).astype(np.int64)
+    mat = js["materials"][pr["material"]]; ti = mat["pbrMetallicRoughness"]["baseColorTexture"]["index"]
+    im = js["images"][js["textures"][ti]["source"]]; v = bv[im["bufferView"]]; f.seek(off + v.get("byteOffset", 0))
+    T = np.asarray(Image.open(io.BytesIO(f.read(v["byteLength"]))).convert("RGB")); h, w = T.shape[:2]
+    uvc = UV[I].mean(1); rgb = T[np.clip((uvc[:, 1] * h).astype(int), 0, h - 1), np.clip((uvc[:, 0] * w).astype(int), 0, w - 1)]
+    # replicate load_source's face filtering, matching faces by centroid
+    V, F = load_source()
+    from scipy.spatial import cKDTree
+    d, idx = cKDTree(P[I].mean(1)).query(V[F].mean(1))
+    assert d.max() < 1e-9, d.max()
+    out = rgb[idx]; np.save(p, out); return out
