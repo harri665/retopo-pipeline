@@ -59,3 +59,8 @@ out; hip cord kept as its own object.
   Open: ragged coat_upper hem at belt; lapel_r lower end may be long; armhole roll borders soft;
   arms.json shoulder_flap_l seeds at front (0.62,0.79), top (0.62,0.16), back (0.64,0.78) are really on
   the cap (chest.json overrides them only by file order: fix in arms.json during the global pass).
+- waist DONE (10 objects PASS: belt, belt_tab, coat_lower, hip_band_l/r, hip_shield_l/r, pocket_flap_l/r,
+  hip_cord at --edge 2). Open (lead must fix in global pass): hip shields cut short at the pointed tip
+  (skirt seeds placed just outside the outline stole it; right shield sits ~0.045 further back in z);
+  coat_lower solid only in the upper front, breaks into strips lower down; shield/skirt border is a
+  weak crease -> needs dense seeds on both sides.
