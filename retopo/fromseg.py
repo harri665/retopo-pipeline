@@ -124,9 +124,22 @@ def build(name, mask, edge_mm=4.0, levels=1, cover=None, skirt_mm=2.0, sharp=Fal
     area = 0.5 * np.linalg.norm(np.cross(TV[TF[:, 1]] - TV[TF[:, 0]], TV[TF[:, 2]] - TV[TF[:, 0]]), axis=1).sum()
     target = min(max_base, max(60, int(area / (edge_mm / MM) ** 2)))
     import fast_simplification
-    dv, df = fast_simplification.simplify(TV.astype(np.float32), TF.astype(np.int32), target_count=min(len(TF), max(4000, target * 12)))
-    dv, df = qremesh.clean_manifold(dv.astype(float), df); dv, df = keep_big(dv, df, 20)
-    Q, P = qremesh.quadriflow(dv, df, target, preserve_sharp=sharp)
+    comp = meshio.face_components(TF, len(TV)); tri_area = 0.5 * np.linalg.norm(np.cross(TV[TF[:, 1]] - TV[TF[:, 0]], TV[TF[:, 2]] - TV[TF[:, 0]]), axis=1)
+    parts, lost = [], 0
+    for c in np.unique(comp):      # each connected piece is remeshed on its own so none gets dropped
+        fc = TF[comp == c]; ac = tri_area[comp == c].sum(); tc = max(24, int(round(target * ac / area)))
+        u, inv = np.unique(fc, return_inverse=True); cv, cf = TV[u], inv.reshape(-1, 3).astype(np.int32)
+        ok = False
+        for mult in (1.0, 1.6, 0.6):
+            try:
+                t2 = max(24, int(tc * mult))
+                dv, df = fast_simplification.simplify(cv.astype(np.float32), cf, target_count=min(len(cf), max(1500, t2 * 12)))
+                dv, df = qremesh.clean_manifold(dv.astype(float), df); dv, df = keep_big(dv, df, 20)
+                parts.append(qremesh.quadriflow(dv, df, t2, preserve_sharp=sharp)); ok = True; break
+            except Exception: pass
+        if not ok: lost += len(fc)
+    from . import build as _B
+    Q, P = _B.merge(parts); P = [list(p) for p in P]
     Q = project_to(Q, P, TV, TF)
     cage = (Q.copy(), [list(p) for p in P])
     if levels: Q, P = hipoly.subdivide(Q, P, levels=levels)
@@ -141,7 +154,7 @@ def build(name, mask, edge_mm=4.0, levels=1, cover=None, skirt_mm=2.0, sharp=Fal
                 if len(k) >= 2: Qn[i] = 0.5 * Q[i] + 0.5 * Q[k].mean(0)
             Q = Qn
         Q = project_to(Q, P, TV, TF, iters=2, smooth=0.3)
-    CV, CF, _ = extract(mask); UV, UF, _ = extract(full); rep = likeness(Q, P, CV, CF, UV, UF); rep.update(name=name, quads=len(P), base_quads=len(cage[1]), area_cm2=round(float(area) * MM * MM / 100, 1))
+    CV, CF, _ = extract(mask); UV, UF, _ = extract(full); rep = likeness(Q, P, CV, CF, UV, UF); rep.update(name=name, pieces=len(parts), faces_lost=int(lost), quads=len(P), base_quads=len(cage[1]), area_cm2=round(float(area) * MM * MM / 100, 1))
     if skirt_mm: Q, P = skirt(Q, P, skirt_mm / MM)
     os.makedirs(os.path.join(meshio.ROOT, out_dir), exist_ok=True); os.makedirs(os.path.join(meshio.ROOT, "hp3_cages"), exist_ok=True)
     meshio.save_obj(os.path.join(meshio.ROOT, out_dir, name + ".obj"), Q, P); meshio.save_obj(os.path.join(meshio.ROOT, "hp3_cages", name + ".obj"), *cage)

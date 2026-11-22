@@ -13,6 +13,10 @@ for parent, items in sorted(by.items()):
     for b in items:
         c = np.array(b["centre"], float); n = np.array(b["normal"], float); n /= np.linalg.norm(n)
         hit = bvh.find_nearest(Vector(c - n * b["height"] * 0.5)); base = np.array(hit[0]) if hit[0] is not None else c - n * b["height"] * 0.5
+        if hit[0] is not None:   # stand the part on the parent's own surface
+            near = [np.array(bvh.find_nearest(Vector(base + d))[1]) for d in (np.cross(n, [1, 0, 0]) * b["radius"], -np.cross(n, [1, 0, 0]) * b["radius"], np.cross(n, [0, 1, 0]) * b["radius"], -np.cross(n, [0, 1, 0]) * b["radius"])] + [np.array(hit[1])]
+            pn = np.mean([q if np.dot(q, n) > 0 else -q for q in near], 0); pn /= np.linalg.norm(pn) + 1e-20
+            if np.dot(pn, n) > 0.5: n = pn
         top = float(np.dot(c - base, n)) + b["height"] * 0.5            # how far the sculpt's bump rises above the seated base
         rad = max(b["radius"] * 1.05, 0.0022); hgt = float(np.clip(max(top, b["height"]), 0.0012, 0.007))
         V, Q = (H.button if kind == "button" else H.stud)(base, n, rad, hgt, n=4 if rad < 0.004 else 6)
